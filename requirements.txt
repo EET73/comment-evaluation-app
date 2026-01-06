@@ -4,4 +4,3 @@ matplotlib
 mplcursors
 openpyxl
 japanize-matplotlib
-import japanize_matplotlib
