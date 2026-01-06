@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
+
+rcParams["font.family"] = "IPAexGothic"
 
 st.set_page_config(layout="wide")
 st.title("コメント評価実験（可視化）")
