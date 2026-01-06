@@ -2,25 +2,27 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-
+import japanize_matplotlib
 rcParams["font.family"] = "IPAexGothic"
 
 st.set_page_config(layout="wide")
 st.title("コメント評価実験（可視化）")
 
 # -----------------------------
-# データ読み込み（1ファイル）
+# 楽曲選択
 # -----------------------------
-data_path = "comment2_xy.xlsx"
-df = pd.read_excel(data_path)
+file_map = {
+    "楽曲A": "comment2_xy.xlsx",
+    "楽曲B": "comment3_xy.xlsx"
+}
+
+music = st.selectbox("評価対象の楽曲を選択してください", file_map.keys())
+df = pd.read_excel(file_map[music])
 
 # 数値化（安全対策）
 df["関連性スコア"] = pd.to_numeric(df["関連性スコア"], errors="coerce")
 df["新規性_IDF"] = pd.to_numeric(df["新規性_IDF"], errors="coerce")
 df = df.dropna(subset=["関連性スコア", "新規性_IDF"])
-
-st.subheader("データ確認")
-st.write(df.head())
 
 # -----------------------------
 # 散布図
