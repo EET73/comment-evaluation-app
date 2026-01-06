@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 
-st.title("コメント評価実験（可視化）")
+st.title("コメント評価実験")
 st.markdown("""
 **横軸**：楽曲との関連性(Relevance)  
 **縦軸**：内容の新規性(Novelty)  
@@ -27,8 +27,27 @@ df["新規性_IDF"] = pd.to_numeric(df["新規性_IDF"], errors="coerce")
 df = df.dropna(subset=["関連性スコア", "新規性_IDF"])
 
 # -----------------------------
+# 実験条件
+# -----------------------------
+condition = st.selectbox(
+    "評価条件",
+    ["① 関連性が高い", "② 新規性が高い", "③ 両方が高い"]
+)
+
+if condition.startswith("①"):
+    df_show = df.sort_values("関連性スコア", ascending=False).head(50)
+elif condition.startswith("②"):
+    df_show = df.sort_values("新規性_IDF", ascending=False).head(50)
+else:
+    df_show = df.sort_values(
+        ["関連性スコア", "新規性_IDF"],
+        ascending=False
+    ).head(50)
+
+# -----------------------------
 # 散布図（英語表記）
 # -----------------------------
+st.subheader("コメント分布（番号のみ表示）")
 fig, ax = plt.subplots(figsize=(6, 6))
 
 ax.scatter(
@@ -38,46 +57,43 @@ ax.scatter(
 )
 
 # 点にコメント番号を小さく表示
-for _, row in df.iterrows():
+for _, row in df_show.iterrows():
     ax.text(
         row["関連性スコア"],
         row["新規性_IDF"],
-        str(row["コメント番号"]),
-        fontsize=6,
-        alpha=0.6
+        str(int(row["コメント番号"])),
+        fontsize=7,
+        alpha=1.0
     )
 
-ax.set_xlabel("Relevance")
-ax.set_ylabel("Novelty")
+ax.set_xlabel("関連性Relevance")
+ax.set_ylabel("新規性Novelty")
 ax.set_title("Comment Distribution")
-
 st.pyplot(fig)
 
 # -----------------------------
-# 点選択
+# 番号選択
 # -----------------------------
-st.subheader("コメントを5つ選択してください（番号）")
+st.subheader("コメント選択")
 
-selected = []
-
-for num in df["コメント番号"]:
-    if st.checkbox(f"コメント {num}", key=f"cb_{num}"):
-        selected.append(num)
-
-# 最大5件制限
-if len(selected) > 5:
-    st.warning("5つまで選択してください")
+selected_ids = st.multiselect(
+    "グラフを見てコメント番号を5つ選択してください",
+    df_show["コメント番号"].tolist(),
+    max_selections=5
+)
 
 # -----------------------------
-# 点選択
+# 本文表示
 # -----------------------------
-if len(selected) == 5:
-    if st.button("OK（コメントを表示）"):
-        st.subheader("選択されたコメント")
+if st.button("OK"):
+    if len(selected_ids) != 5:
+        st.warning("5件選択してください。")
+    else:
+        st.success("選択完了")
 
-        result_df = df[df["コメント番号"].isin(selected)]
-
+        st.subheader("選択されたコメント本文")
         st.table(
-            result_df[["コメント番号", "コメント"]]
-            .reset_index(drop=True)
+            df[df["コメント番号"].isin(selected_ids)][
+                ["コメント番号", "コメント"]
+            ]
         )
