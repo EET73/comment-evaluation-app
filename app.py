@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
+st.title("★ 新しい app.py が読み込まれています ★")
 st.set_page_config(layout="wide")
 
 st.title("コメント評価実験（可視化）")
