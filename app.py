@@ -31,18 +31,19 @@ df = df.dropna(subset=["関連性スコア", "新規性_IDF"])
 # -----------------------------
 condition = st.selectbox(
     "評価条件",
-    ["① 関連性が高い", "② 新規性が高い", "③ 両方が高い"]
+    ["① 楽曲との関連性が高い", "② コメント内容の新規性が高い", "③ 楽曲との関連性、コメント内容の新規性どちらも高い"]
 )
 
+TOP_N = 70
 if condition.startswith("①"):
-    df_show = df.sort_values("関連性スコア", ascending=False).head(50)
+    df_show = df.sort_values("関連性スコア", ascending=False).head(TOP_N)
 elif condition.startswith("②"):
-    df_show = df.sort_values("新規性_IDF", ascending=False).head(50)
+    df_show = df.sort_values("新規性_IDF", ascending=False).head(TOP_N)
 else:
     df_show = df.sort_values(
         ["関連性スコア", "新規性_IDF"],
         ascending=False
-    ).head(50)
+    ).head(TOP_N)
 
 # -----------------------------
 # 散布図（英語表記）
@@ -51,8 +52,8 @@ st.subheader("コメント分布（番号のみ表示）")
 fig, ax = plt.subplots(figsize=(6, 6))
 
 ax.scatter(
-    df["関連性スコア"],
-    df["新規性_IDF"],
+    df_show["関連性スコア"],
+    df_show["新規性_IDF"],
     alpha=0.7
 )
 
@@ -62,12 +63,12 @@ for _, row in df_show.iterrows():
         row["関連性スコア"],
         row["新規性_IDF"],
         str(int(row["コメント番号"])),
-        fontsize=7,
+        fontsize=5,
         alpha=1.0
     )
 
-ax.set_xlabel("関連性Relevance")
-ax.set_ylabel("新規性Novelty")
+ax.set_xlabel("Relevance")
+ax.set_ylabel("Novelty")
 ax.set_title("Comment Distribution")
 st.pyplot(fig)
 
@@ -76,9 +77,11 @@ st.pyplot(fig)
 # -----------------------------
 st.subheader("コメント選択")
 
+selectable_ids = sorted(df_show["コメント番号"].astype(int).tolist())
+
 selected_ids = st.multiselect(
     "グラフを見てコメント番号を5つ選択してください",
-    df_show["コメント番号"].tolist(),
+    selectable_ids,
     max_selections=5
 )
 
@@ -93,7 +96,8 @@ if st.button("OK"):
 
         st.subheader("選択されたコメント本文")
         st.table(
-            df[df["コメント番号"].isin(selected_ids)][
+            df[df["コメント番号"].isin(selected_ids)]
+            .sort_values("コメント番号")[
                 ["コメント番号", "コメント"]
             ]
         )
