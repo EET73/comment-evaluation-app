@@ -37,10 +37,10 @@ st.title("コメント評価実験")
 st.markdown("""
 本実験では、楽曲に付与されたコメントの提示方法について評価していただきます。
 
-各楽曲について、以下の2種類のコメント一覧（A, B）が提示されます。
+各楽曲について、以下の2種類のコメント群（A群, B群）が提示されます。
 
 それぞれの一覧を確認した上で、  
-**条件により適切だと感じた方**を選択してください。
+**条件により適切だと感じたコメント群(A群 or B群)**を選択してください。
 """)
 
 # =============================
@@ -128,7 +128,7 @@ for music, file in file_map.items():
     proposed_top5 = get_proposed_top5(df, condition)
     eval_top5 = EVAL_TOP5[music]
 
-    st.subheader("A")
+    st.subheader("A群")
     st.caption("※ 各コメントはセルをダブルクリックすると全文を確認できます。")
     st.dataframe(
         proposed_top5[["コメント"]].reset_index(drop=True),
@@ -136,7 +136,7 @@ for music, file in file_map.items():
         use_container_width=True
     )
 
-    st.subheader("B")
+    st.subheader("B群")
     st.caption("※ 各コメントはセルをダブルクリックすると全文を確認できます。")
     st.dataframe(
         pd.DataFrame({
@@ -149,11 +149,11 @@ for music, file in file_map.items():
     q1 = st.radio(
         "Q1. 条件により適切なのはどちらですか？",
         [
-            "Aの方が良い",
-            "Aの方がやや良い",
+            "A群の方が良い",
+            "A群の方がやや良い",
             "どちらともいえない",
-            "Bの方がやや良い",
-            "Bの方が良い"
+            "B群の方がやや良い",
+            "B群の方が良い"
         ],
         index=None,
         key=f"q1_{music}"
@@ -206,7 +206,7 @@ if st.button("提出"):
 # 管理者用
 # =============================
 st.divider()
-st.caption("※ 以下気にしないでください")
+st.caption("※ 以下気にしないでください...")
 
 pw = st.text_input("", type="password")
 if st.button("　"):
