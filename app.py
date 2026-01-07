@@ -36,14 +36,11 @@ condition = st.selectbox(
 
 TOP_N = 70
 if condition.startswith("①"):
-    df_show = df.sort_values("関連性スコア", ascending=False).head(TOP_N)
+    df_show = df.sort_values("関連性_norm", ascending=False).head(TOP_N)
 elif condition.startswith("②"):
-    df_show = df.sort_values("新規性_IDF", ascending=False).head(TOP_N)
+    df_show = df.sort_values("新規性_norm", ascending=False).head(TOP_N)
 else:
-    df_show = df.sort_values(
-        ["関連性スコア", "新規性_IDF"],
-        ascending=False
-    ).head(TOP_N)
+    df_show = df.sort_values("両立スコア", ascending=False).head(TOP_N)
 
 # -----------------------------
 # 散布図（英語表記）
