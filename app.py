@@ -66,13 +66,22 @@ df = df.dropna(subset=["関連性スコア", "新規性_IDF"])
 # =============================
 condition = st.session_state.condition
 
-condition_text = {
-    "①": "楽曲との関連性が高いコメントを選んでください",
-    "②": "内容の新規性が高いコメントを選んでください",
-    "③": "関連性・新規性がどちらも高いコメントを選んでください"
-}[condition]
+if condition == "①":
+    condition_text = "楽曲との関連性が高いコメントを選んでください"
+elif condition == "②":
+    condition_text = "内容の新規性が高いコメントを選んでください"
+else:
+    condition_text = "関連性・新規性がどちらも高いコメントを選んでください"
 
 st.info(condition_text)
+
+TOP_N = 70
+if condition == "①":
+    df_show = df.sort_values("関連性_norm", ascending=False).head(TOP_N)
+elif condition == "②":
+    df_show = df.sort_values("新規性_norm", ascending=False).head(TOP_N)
+else:
+    df_show = df.sort_values("両立スコア", ascending=False).head(TOP_N)
 
 # =============================
 # 散布図
@@ -80,10 +89,15 @@ st.info(condition_text)
 st.subheader("コメント分布（番号のみ表示）")
 
 fig, ax = plt.subplots(figsize=(6, 6))
-ax.scatter(df["関連性スコア"], df["新規性_IDF"], alpha=0.7)
+ax.scatter(df_show["関連性スコア"], df_show["新規性_IDF"], alpha=0.7)
 
-for _, row in df.iterrows():
-    ax.text(row["関連性スコア"], row["新規性_IDF"], str(int(row["コメント番号"])), fontsize=4)
+for _, row in df_show.iterrows():
+    ax.text(
+        row["関連性スコア"],
+        row["新規性_IDF"],
+        str(int(row["コメント番号"])),
+        fontsize=4
+    )
 
 ax.set_xlabel("Relevance")
 ax.set_ylabel("Novelty")
@@ -93,9 +107,13 @@ st.pyplot(fig)
 # コメント選択
 # =============================
 st.subheader("コメント選択")
+selectable_ids = sorted(df_show["コメント番号"].astype(int).tolist())
 
-selectable_ids = sorted(df["コメント番号"].astype(int).tolist())
-selected_ids = st.multiselect("コメント番号を5つ選択してください", selectable_ids, max_selections=5)
+selected_ids = st.multiselect(
+    "コメント番号を5つ選択してください",
+    selectable_ids,
+    max_selections=5
+)
 
 confirmed = st.session_state.confirmed.get(music, False)
 
@@ -113,29 +131,68 @@ if confirmed:
         hide_index=True,
         use_container_width=True
     )
+# =============================
+# 評価順 Top5（仮）
+# =============================
+EVAL_TOP5 = {
+    "アイネクライネ": [
+        "コメント古い順追加してほしい",
+        "しんどいことがあった時、友達が下校中に傘をひっくり返して「アイネクライネ！」って一発芸してくれて救われたことある。ありがとう",
+        "ふと急にアイネクライネ聴きたくなる時あるよね。",
+        "おそらくIRIS OUT効果でTOP100入りしてるんだろうけど、この曲の何がすごいって作詞作曲だけじゃなくてMVのイラストも米津さんなんよね。",
+        '"いつか来るお別れを育てて歩く"この表現すごい...'
+    ],
+    "アイドル": [
+        "また良い曲作りましたなAyase氏",
+        "「ああやっと言えた、これは絶対嘘じゃない、愛してる」のところめっちゃ感動",
+        "急に聞きたくなって戻ってきちゃった",
+        "もう2年か...",
+        """マリアで崇拝されるアイドルと母の両方表してるの控えめに言って最高
+        5億再生おめでとうございます！！"""
+    ]
+}
+st.subheader("評価順Top5")
+st.dataframe(
+    pd.DataFrame({
+        "順位": [1, 2, 3, 4, 5],
+        "コメント": EVAL_TOP5[music]
+    }),
+    hide_index=True,
+    use_container_width=True
+)
+# =============================
+# 設問
+# =============================
+q1 = st.radio(
+    "Q1. 条件に合っているのはどちらですか？",[
+        "評価順の方が良い",
+        "評価順の方がやや良い",
+        "どちらともいえない",
+        "提案手法の方がやや良い",
+        "提案手法の方が良い"],
+    key=f"q1_{music}"
+)
+q2 = st.text_area(
+    "Q2. その他気になったこと・気づいたこと",
+    key=f"q2_{music}"
+)
 
-    q1 = st.radio(
-        "Q1. 条件に合っているのはどちらですか？",
-        [
-            "評価順の方が良い",
-            "評価順の方がやや良い",
-            "どちらともいえない",
-            "提案手法の方がやや良い",
-            "提案手法の方が良い"
-        ],
-        key=f"q1_{music}"
-    )
-
-    q2 = st.text_area("Q2. その他気になったこと", key=f"q2_{music}")
-
-    if st.button("この楽曲の回答を保存"):
+if st.button("この楽曲の回答を保存"):
+    if not q1:
+        st.warning("Q1に回答してください。")
+    else:
         st.session_state.responses[music] = {
             "selected_ids": selected_ids,
             "q1": q1,
             "q2": q2
         }
         st.success(f"{music} の回答を保存しました。")
-
+# =============================
+# 回答状況
+# =============================
+st.subheader("回答状況")
+for m in file_map.keys():
+    st.write("✅" if m in st.session_state.responses else "⬜", m)
 # =============================
 # 最終送信（CSV追記）
 # =============================
