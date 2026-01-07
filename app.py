@@ -133,7 +133,6 @@ for music, file in file_map.items():
     st.subheader("タイプB")
     st.dataframe(
         pd.DataFrame({
-        "順位": [1, 2, 3, 4, 5],
         "コメント": proposed_top5
     }),
         hide_index=True,
