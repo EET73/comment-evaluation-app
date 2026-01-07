@@ -129,6 +129,7 @@ if st.button("OK（コメント内容を表示）"):
 
 if confirmed:
     st.subheader("選択されたコメント")
+    st.caption("※ 表内のコメントは、セルをダブルクリックすると全文を確認できます。")
     st.dataframe(
         df[df["コメント番号"].isin(selected_ids)]
         .sort_values("コメント番号")[["コメント番号", "コメント"]],
@@ -174,14 +175,28 @@ if confirmed:
         "Q2. その他気になったこと・気づいたこと",
         key=f"q2_{music}"
     )
-
     if st.button("この楽曲の回答を保存"):
+    if not confirmed:
+        st.warning("先に OK を押してコメント内容を確認してください。")
+    elif len(selected_ids) != 5:
+        st.warning("5件選択してください。")
+    elif not q1:
+        st.warning("Q1 に回答してください。")
+    else:
         st.session_state.responses[music] = {
             "selected_ids": selected_ids,
             "q1": q1,
             "q2": q2
         }
         st.success(f"{music} の回答を保存しました。")
+
+    # if st.button("この楽曲の回答を保存"):
+    #     st.session_state.responses[music] = {
+    #         "selected_ids": selected_ids,
+    #         "q1": q1,
+    #         "q2": q2
+    #     }
+    #     st.success(f"{music} の回答を保存しました。")
 
 # -----------------------------
 # 回答状況
