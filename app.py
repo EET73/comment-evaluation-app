@@ -126,7 +126,7 @@ for music, file in file_map.items():
     proposed_top5 = get_proposed_top5(df, condition)
     eval_top5 = EVAL_TOP5[music]
 
-    st.subheader("提案手法 Top5")
+    st.subheader("タイプA")
     st.dataframe(
         pd.DataFrame({
             "順位": [1, 2, 3, 4, 5],
@@ -136,7 +136,7 @@ for music, file in file_map.items():
         use_container_width=True
     )
 
-    st.subheader("評価順 Top5")
+    st.subheader("タイプB")
     st.dataframe(
         pd.DataFrame({
             "順位": [1, 2, 3, 4, 5],
@@ -156,11 +156,11 @@ for music, file in file_map.items():
         q1 = st.radio(
             "Q1. 条件により適切なのはどちらですか？",
             [
-                "評価順の方が良い",
-                "評価順の方がやや良い",
+                "Aの方が良い",
+                "Aの方がやや良い",
                 "どちらともいえない",
-                "提案手法の方がやや良い",
-                "提案手法の方が良い"
+                "Bの方がやや良い",
+                "Bの方が良い"
             ],
             key=f"q1_{music}"
         )
