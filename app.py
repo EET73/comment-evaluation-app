@@ -70,14 +70,14 @@ st.info(condition_text)
 # 評価順 Top5（固定）
 # =============================
 EVAL_TOP5 = {
-    "アイネクライネ": [
+    "『アイネクライネ』米津玄師": [
         "コメント古い順追加してほしい",
         "しんどいことがあった時、友達が下校中に傘をひっくり返して「アイネクライネ！」って一発芸してくれて救われたことある。ありがとう",
         "ふと急にアイネクライネ聴きたくなる時あるよね。",
         "おそらくIRIS OUT効果でTOP100入りしてるんだろうけど、この曲の何がすごいって作詞作曲だけじゃなくてMVのイラストも米津さんなんよね。",
         '"いつか来るお別れを育てて歩く"この表現すごい...'
     ],
-    "アイドル": [
+    "『アイドル』YOASOBI": [
         "また良い曲作りましたなAyase氏",
         "「ああやっと言えた、これは絶対嘘じゃない、愛してる」のところめっちゃ感動",
         "急に聞きたくなって戻ってきちゃった",
@@ -109,31 +109,35 @@ def get_proposed_top5(df, condition):
 # 楽曲ごとの評価
 # =============================
 file_map = {
-    "アイネクライネ": "comment2_xy.xlsx",
-    "アイドル": "comment3_xy.xlsx"
+    "『アイネクライネ』米津玄師": "comment2_xy.xlsx",
+    "『アイドル』YOASOBI": "comment3_xy.xlsx"
+}
+MUSIC_URL = {
+    "アイネクライネ": "https://www.youtube.com/watch?v=-EKxzId_Sj4",
+    "アイドル": "https://www.youtube.com/watch?v=ZRtdQ81jPUQ"
 }
 
 responses = {}
 
 for music, file in file_map.items():
-    st.header(music)
-
+    st.subheader(music)
+    st.caption("※ 楽曲を知らない方は、以下から視聴できます")
+    st.video(MUSIC_URL[music])
     df = pd.read_excel(file)
 
     proposed_top5 = get_proposed_top5(df, condition)
     eval_top5 = EVAL_TOP5[music]
 
-    st.subheader("タイプA")
+    st.subheader("A")
     st.dataframe(
-        proposed_top5,
+        proposed_top5[["コメント"]].reset_index(drop=True),
         hide_index=True,
         use_container_width=True
     )
 
-    st.subheader("タイプB")
+    st.subheader("B")
     st.dataframe(
         pd.DataFrame({
-            "順位": [1, 2, 3, 4, 5],
             "コメント": eval_top5
         }),
         hide_index=True,
