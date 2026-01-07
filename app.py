@@ -82,4 +82,137 @@ EVAL_TOP5 = {
         "「ああやっと言えた、これは絶対嘘じゃない、愛してる」のところめっちゃ感動",
         "急に聞きたくなって戻ってきちゃった",
         "もう2年か...",
-        """マリアで崇拝されるアイドルと母の両方表してるの控えめに言って最
+        """マリアで崇拝されるアイドルと母の両方表してるの控えめに言って最高
+5億再生おめでとうございます！！"""
+    ]
+}
+
+# =============================
+# 提案手法 Top5 取得関数
+# =============================
+def get_proposed_top5(df, condition):
+    if condition == "①":
+        col = "関連性_norm"
+    elif condition == "②":
+        col = "新規性_norm"
+    else:
+        col = "両立スコア"
+
+    return (
+        df.sort_values(col, ascending=False)
+          .head(5)["コメント"]
+          .tolist()
+    )
+
+# =============================
+# 楽曲ごとの評価
+# =============================
+file_map = {
+    "アイネクライネ": "comment2_xy.xlsx",
+    "アイドル": "comment3_xy.xlsx"
+}
+
+responses = {}
+
+for music, file in file_map.items():
+    st.header(music)
+
+    df = pd.read_excel(file)
+
+    proposed_top5 = get_proposed_top5(df, condition)
+    eval_top5 = EVAL_TOP5[music]
+
+    st.subheader("タイプA")
+    st.dataframe(
+        pd.DataFrame({
+            "順位": [1, 2, 3, 4, 5],
+            "コメント": proposed_top5
+        }),
+        hide_index=True,
+        use_container_width=True
+    )
+
+    st.subheader("タイプB")
+    st.dataframe(
+        pd.DataFrame({
+            "順位": [1, 2, 3, 4, 5],
+            "コメント": eval_top5
+        }),
+        hide_index=True,
+        use_container_width=True
+    )
+
+    q1 = st.radio(
+        "Q1. 条件により適切なのはどちらですか？",
+        [
+            "Aの方が良い",
+            "Aの方がやや良い",
+            "どちらともいえない",
+            "Bの方がやや良い",
+            "Bの方が良い"
+        ],
+        index=None,
+        key=f"q1_{music}"
+    )
+
+    q2 = st.text_area(
+        "Q2. その他気づいた点（任意）",
+        key=f"q2_{music}"
+    )
+
+    responses[music] = {
+        "q1": q1,
+        "q2": q2
+    }
+
+# =============================
+# 最終送信
+# =============================
+st.divider()
+
+if st.button("提出"):
+    unanswered = [m for m, r in responses.items() if r["q1"] is None]
+
+    if unanswered:
+        st.warning("すべての楽曲について Q1 に回答してください。")
+    else:
+        new_file = not os.path.exists(LOG_FILE)
+
+        with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if new_file:
+                writer.writerow([
+                    "timestamp", "participant_id", "condition",
+                    "music", "Q1", "Q2"
+                ])
+
+            for music, r in responses.items():
+                writer.writerow([
+                    datetime.now().isoformat(),
+                    st.session_state.participant_id,
+                    condition,
+                    music,
+                    r["q1"],
+                    r["q2"]
+                ])
+
+        st.success("ご協力ありがとうございました。")
+
+# =============================
+# 管理者用
+# =============================
+st.divider()
+st.caption("※ 管理者用")
+
+pw = st.text_input("", type="password")
+if st.button("　"):
+    st.session_state.is_admin = (pw == ADMIN_PASSWORD)
+
+if st.session_state.is_admin and os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "r", encoding="utf-8") as f:
+        st.download_button(
+            "CSVダウンロード",
+            f.read(),
+            "experiment_log.csv",
+            "text/csv"
+        )
