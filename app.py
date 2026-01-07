@@ -219,4 +219,24 @@ if st.button("最終送信"):
 # 管理者専用：ログ確認
 # =============================
 st.divider()
-st.sub
+st.subheader("管理者専用")
+
+pw = st.text_input("管理者パスワード", type="password")
+if st.button("管理者ログイン"):
+    if pw == ADMIN_PASSWORD:
+        st.session_state.is_admin = True
+        st.success("管理者ログイン成功")
+    else:
+        st.error("パスワードが違います")
+
+if st.session_state.is_admin and os.path.exists(LOG_FILE):
+    df_log = pd.read_csv(LOG_FILE)
+    st.dataframe(df_log, use_container_width=True)
+
+    with open(LOG_FILE, "r", encoding="utf-8") as f:
+        st.download_button(
+            "実験ログCSVをダウンロード",
+            f.read(),
+            file_name="experiment_log.csv",
+            mime="text/csv"
+        )
