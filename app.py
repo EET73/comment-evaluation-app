@@ -125,13 +125,10 @@ for music, file in file_map.items():
 
     st.subheader("タイプA")
     st.dataframe(
-    proposed_top5.rename(columns={
-        "コメント番号": "コメント番号",
-        "コメント": "コメント"
-    }),
-    hide_index=True,
-    use_container_width=True
-)
+        proposed_top5,
+        hide_index=True,
+        use_container_width=True
+    )
 
     st.subheader("タイプB")
     st.dataframe(
