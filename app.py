@@ -113,8 +113,8 @@ file_map = {
     "『アイドル』YOASOBI": "comment3_xy.xlsx"
 }
 MUSIC_URL = {
-    "アイネクライネ": "https://www.youtube.com/watch?v=-EKxzId_Sj4",
-    "アイドル": "https://www.youtube.com/watch?v=ZRtdQ81jPUQ"
+    "『アイネクライネ』米津玄師": "https://www.youtube.com/watch?v=-EKxzId_Sj4",
+    "『アイドル』YOASOBI": "https://www.youtube.com/watch?v=ZRtdQ81jPUQ"
 }
 
 responses = {}
