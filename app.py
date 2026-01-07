@@ -206,7 +206,7 @@ if st.button("提出"):
 # 管理者用
 # =============================
 st.divider()
-st.caption("※ 管理者用")
+st.caption("※ 以下気にしないでください")
 
 pw = st.text_input("", type="password")
 if st.button("　"):
