@@ -4,12 +4,19 @@ import matplotlib.pyplot as plt
 import random
 import csv
 from datetime import datetime
+import io
+import os
+
+# 後で消す
+st.write("ログ保存先:", os.getcwd())
 
 st.set_page_config(layout="wide")
 if "condition" not in st.session_state:
     st.session_state.condition = random.choice(["①", "②", "③"])
     
 st.title("コメント評価実験")
+if "log_rows" not in st.session_state:
+    st.session_state.log_rows = []
 st.markdown("""
 **横軸**：楽曲との関連性(Relevance)  
 **縦軸**：内容の新規性(Novelty)  
@@ -125,13 +132,37 @@ q2 = st.text_area("Q2. その他気になったこと・気づいたこと")
 # ログ保存
 # -----------------------------
 if st.button("送信"):
-    with open("experiment_log.csv", "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            datetime.now().isoformat(),
-            st.session_state.condition,
-            ",".join(map(str, selected_ids)),
-            q1,
-            q2
-        ])
+    st.session_state.log_rows.append([
+        condition,                       # ①〜③
+        ",".join(map(str, selected_ids)),# 選択コメント番号
+        q1,                              # Q1回答
+        q2                               # Q2自由記述
+    ])
     st.success("回答ありがとうございました")
+# if st.button("送信"):
+#     with open("experiment_log.csv", "a", newline="", encoding="utf-8") as f:
+#         writer = csv.writer(f)
+#         writer.writerow([
+#             datetime.now().isoformat(),
+#             st.session_state.condition,
+#             ",".join(map(str, selected_ids)),
+#             q1,
+#             q2
+#         ])
+#     st.success("回答ありがとうございました")
+
+# -----------------------------
+# CSVダウンロード
+# -----------------------------
+if st.session_state.log_rows:
+    csv_buffer = io.StringIO()
+    writer = csv.writer(csv_buffer)
+    writer.writerow(["条件", "選択コメント", "Q1", "Q2"])
+    writer.writerows(st.session_state.log_rows)
+
+    st.download_button(
+        label="実験ログをダウンロード",
+        data=csv_buffer.getvalue(),
+        file_name="experiment_log.csv",
+        mime="text/csv"
+    )
