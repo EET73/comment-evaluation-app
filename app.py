@@ -5,11 +5,16 @@ import random
 import csv
 from datetime import datetime
 import io
-import os
+# import os
+import uuid
 
-# 後で消す
-st.write("ログ保存先:", os.getcwd())
-
+# # 後で消す
+# st.write("ログ保存先:", os.getcwd())
+if "participant_id" not in st.session_state:
+    st.session_state.participant_id = str(uuid.uuid4())[:8]
+if "responses" not in st.session_state:
+    st.session_state.responses = {}
+    
 st.set_page_config(layout="wide")
 if "condition" not in st.session_state:
     st.session_state.condition = random.choice(["①", "②", "③"])
@@ -116,10 +121,23 @@ if st.button("OK"):
                 ["コメント番号", "コメント"]
             ]
         )
+# 評価順(既存手法)Top5
+st.subheader("評価順Top5（参考）")
+st.table(pd.DataFrame({
+    "順位": [1,2,3,4,5],
+    "コメント": [
+        "コメント1",
+        "コメント2",
+        "コメント3",
+        "コメント4",
+        "コメント5",
+    ]
+}))
 
 # -----------------------------
 # 設問
 # -----------------------------
+# ※後で5段階を数値からテキストに
 q1 = st.radio(
     "Q1. 条件に合っているのはどちらですか？",
     [-2, -1, 0, 1, 2],
@@ -128,28 +146,52 @@ q1 = st.radio(
 
 q2 = st.text_area("Q2. その他気になったこと・気づいたこと")
 
+if st.button("この楽曲の回答を保存"):
+    if len(selected_ids) != 5:
+        st.warning("5件選択してください。")
+    else:
+        st.session_state.responses[music] = {
+            "selected_ids": selected_ids,
+            "q1": q1,
+            "q2": q2
+        }
+        st.success(f"{music} の回答を保存しました。次の楽曲へ進めます。")
+st.subheader("回答状況")
+for m in file_map.keys():
+    if m in st.session_state.responses:
+        st.write(f"✅ {m}：回答済み")
+    else:
+        st.write(f"⬜ {m}：未回答")
+
+
 # -----------------------------
 # ログ保存
 # -----------------------------
-if st.button("送信"):
-    st.session_state.log_rows.append([
-        condition,                       # ①〜③
-        ",".join(map(str, selected_ids)),# 選択コメント番号
-        q1,                              # Q1回答
-        q2                               # Q2自由記述
-    ])
-    st.success("回答ありがとうございました")
 # if st.button("送信"):
-#     with open("experiment_log.csv", "a", newline="", encoding="utf-8") as f:
-#         writer = csv.writer(f)
-#         writer.writerow([
-#             datetime.now().isoformat(),
-#             st.session_state.condition,
+#     if len(selected_ids) != 5:
+#         st.warning("5件選択した状態で送信してください。")
+#     else:
+#         st.session_state.log_rows.append([
+#             condition,
 #             ",".join(map(str, selected_ids)),
 #             q1,
 #             q2
 #         ])
-#     st.success("回答ありがとうございました")
+#         st.success("回答ありがとうございました")
+if st.button("最終送信"):
+    if len(st.session_state.responses) != len(file_map):
+        st.warning("すべての楽曲を評価してください。")
+    else:
+        for music, res in st.session_state.responses.items():
+            st.session_state.log_rows.append([
+                st.session_state.participant_id,
+                st.session_state.condition,
+                music,
+                ",".join(map(str, res["selected_ids"])),
+                res["q1"],
+                res["q2"]
+            ])
+        st.success("ご協力ありがとうございました。")
 
 # -----------------------------
 # CSVダウンロード
@@ -157,7 +199,14 @@ if st.button("送信"):
 if st.session_state.log_rows:
     csv_buffer = io.StringIO()
     writer = csv.writer(csv_buffer)
-    writer.writerow(["条件", "選択コメント", "Q1", "Q2"])
+    writer.writerow([
+    "被験者ID",
+    "条件",
+    "楽曲",
+    "選択コメント",
+    "Q1_評価",
+    "Q2_自由記述"
+    ])
     writer.writerows(st.session_state.log_rows)
 
     st.download_button(
