@@ -175,7 +175,7 @@ if confirmed:
         "Q2. その他気になったこと・気づいたこと",
         key=f"q2_{music}"
     )
-    if st.button("この楽曲の回答を保存"):
+if st.button("この楽曲の回答を保存"):
     if not confirmed:
         st.warning("先に OK を押してコメント内容を確認してください。")
     elif len(selected_ids) != 5:
@@ -189,7 +189,6 @@ if confirmed:
             "q2": q2
         }
         st.success(f"{music} の回答を保存しました。")
-
     # if st.button("この楽曲の回答を保存"):
     #     st.session_state.responses[music] = {
     #         "selected_ids": selected_ids,
