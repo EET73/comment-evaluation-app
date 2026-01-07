@@ -98,11 +98,12 @@ def get_proposed_top5(df, condition):
     else:
         col = "両立スコア"
 
-    return (
+    top = (
         df.sort_values(col, ascending=False)
-          .head(5)["コメント"]
-          .tolist()
+          .head(5)[["コメント番号", "コメント"]]
+          .astype({"コメント番号": int})
     )
+    return top
 
 # =============================
 # 楽曲ごとの評価
@@ -124,20 +125,20 @@ for music, file in file_map.items():
 
     st.subheader("タイプA")
     st.dataframe(
-        pd.DataFrame({
-            "順位": [1, 2, 3, 4, 5],
-            "コメント": proposed_top5
-        }),
-        hide_index=True,
-        use_container_width=True
-    )
+    proposed_top5.rename(columns={
+        "コメント番号": "コメント番号",
+        "コメント": "コメント"
+    }),
+    hide_index=True,
+    use_container_width=True
+)
 
     st.subheader("タイプB")
     st.dataframe(
         pd.DataFrame({
-            "順位": [1, 2, 3, 4, 5],
-            "コメント": eval_top5
-        }),
+        "順位": [1, 2, 3, 4, 5],
+        "コメント": proposed_top5
+    }),
         hide_index=True,
         use_container_width=True
     )
