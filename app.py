@@ -1,9 +1,14 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import random
+import csv
+from datetime import datetime
 
 st.set_page_config(layout="wide")
-
+if "condition" not in st.session_state:
+    st.session_state.condition = random.choice(["①", "②", "③"])
+    
 st.title("コメント評価実験")
 st.markdown("""
 **横軸**：楽曲との関連性(Relevance)  
@@ -29,10 +34,16 @@ df = df.dropna(subset=["関連性スコア", "新規性_IDF"])
 # -----------------------------
 # 実験条件
 # -----------------------------
-condition = st.selectbox(
-    "評価条件",
-    ["① 楽曲との関連性が高い", "② コメント内容の新規性が高い", "③ 楽曲との関連性、コメント内容の新規性どちらも高い"]
-)
+condition = st.session_state.condition
+
+if condition == "①":
+    condition_text = "楽曲との関連性が高いコメントを選んでください"
+elif condition == "②":
+    condition_text = "内容の新規性が高いコメントを選んでください"
+else:
+    condition_text = "関連性・新規性がどちらも高いコメントを選んでください"
+
+st.info(condition_text)
 
 TOP_N = 70
 if condition.startswith("①"):
@@ -60,7 +71,7 @@ for _, row in df_show.iterrows():
         row["関連性スコア"],
         row["新規性_IDF"],
         str(int(row["コメント番号"])),
-        fontsize=5,
+        fontsize=4,
         alpha=1.0
     )
 
@@ -83,7 +94,7 @@ selected_ids = st.multiselect(
 )
 
 # -----------------------------
-# 本文表示
+# コメント表示
 # -----------------------------
 if st.button("OK"):
     if len(selected_ids) != 5:
@@ -91,10 +102,36 @@ if st.button("OK"):
     else:
         st.success("選択完了")
 
-        st.subheader("選択されたコメント本文")
+        st.subheader("選択されたコメント")
         st.table(
             df[df["コメント番号"].isin(selected_ids)]
             .sort_values("コメント番号")[
                 ["コメント番号", "コメント"]
             ]
         )
+
+# -----------------------------
+# 設問
+# -----------------------------
+q1 = st.radio(
+    "Q1. 条件に合っているのはどちらですか？",
+    [-2, -1, 0, 1, 2],
+    horizontal=True
+)
+
+q2 = st.text_area("Q2. その他気になったこと・気づいたこと")
+
+# -----------------------------
+# ログ保存
+# -----------------------------
+if st.button("送信"):
+    with open("experiment_log.csv", "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            datetime.now().isoformat(),
+            st.session_state.condition,
+            ",".join(map(str, selected_ids)),
+            q1,
+            q2
+        ])
+    st.success("回答ありがとうございました")
