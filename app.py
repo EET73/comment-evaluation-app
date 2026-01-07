@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import random
 import csv
 import uuid
@@ -12,7 +11,7 @@ from datetime import datetime
 # =============================
 LOG_DIR = "data"
 LOG_FILE = os.path.join(LOG_DIR, "experiment_log.csv")
-ADMIN_PASSWORD = "ehimecho"
+ADMIN_PASSWORD = "ehimecho"  # ★必ず後で変更
 
 st.set_page_config(layout="wide")
 
@@ -37,113 +36,44 @@ if "is_admin" not in st.session_state:
     st.session_state.is_admin = False
 
 # =============================
-# タイトル
+# タイトル・説明
 # =============================
 st.title("コメント評価実験")
 
 st.markdown("""
-**横軸**：楽曲との関連性 (Relevance)  
-**縦軸**：内容の新規性 (Novelty)
+本実験では、楽曲に付与されたコメントの提示方法について評価していただきます。
+
+各楽曲について、以下の2種類のコメント一覧(A, B)が提示されます。
+
+それぞれの一覧を確認した上で、  
+**条件により適切だと感じた方**を選択してください。
 """)
 
 # =============================
-# 楽曲選択
-# =============================
-file_map = {
-    "アイネクライネ": "comment2_xy.xlsx",
-    "アイドル": "comment3_xy.xlsx"
-}
-
-music = st.selectbox("評価対象の楽曲を選択してください", file_map.keys())
-df = pd.read_excel(file_map[music])
-
-df["関連性スコア"] = pd.to_numeric(df["関連性スコア"], errors="coerce")
-df["新規性_IDF"] = pd.to_numeric(df["新規性_IDF"], errors="coerce")
-df = df.dropna(subset=["関連性スコア", "新規性_IDF"])
-
-# =============================
-# 実験条件
+# 条件表示
 # =============================
 condition = st.session_state.condition
 
 if condition == "①":
-    condition_text = "楽曲との関連性が高いコメントを選んでください"
+    condition_text = """
+**条件：楽曲との関連性が高いコメント**
+（楽曲と直接関係のないコメントが混ざっていないか）
+"""
 elif condition == "②":
-    condition_text = "内容の新規性が高いコメントを選んでください"
+    condition_text = """
+**条件：内容の新規性が高いコメント**
+（内容が"あるある"なコメントに偏っていないか）
+"""
 else:
-    condition_text = "関連性・新規性がどちらも高いコメントを選んでください"
+    condition_text = """
+**条件：関連性・新規性がどちらも高いコメント**
+（楽曲と直接関係のないコメント、内容が"あるある"なコメントが混ざっていないか）
+"""
 
 st.info(condition_text)
 
-TOP_N = 70
-if condition == "①":
-    df_show = df.sort_values("関連性_norm", ascending=False).head(TOP_N)
-elif condition == "②":
-    df_show = df.sort_values("新規性_norm", ascending=False).head(TOP_N)
-else:
-    df_show = df.sort_values("両立スコア", ascending=False).head(TOP_N)
-
 # =============================
-# 散布図
-# =============================
-st.subheader("コメント分布（番号のみ表示）")
-
-fig, ax = plt.subplots(figsize=(6, 6))
-ax.scatter(df_show["関連性スコア"], df_show["新規性_IDF"], alpha=0.7)
-
-for _, row in df_show.iterrows():
-    ax.text(
-        row["関連性スコア"],
-        row["新規性_IDF"],
-        str(int(row["コメント番号"])),
-        fontsize=4
-    )
-
-ax.set_xlabel("Relevance")
-ax.set_ylabel("Novelty")
-st.pyplot(fig)
-
-# =============================
-# コメント選択
-# =============================
-st.subheader("コメント選択")
-
-selectable_ids = sorted(df_show["コメント番号"].astype(int).tolist())
-
-selected_ids = st.multiselect(
-    "コメント番号を5つ選択してください",
-    selectable_ids,
-    max_selections=5,
-    key=f"select_{music}"
-)
-
-# ===== ここが重要 =====
-# 選択が変わったら confirmed をリセット
-if f"last_selected_{music}" not in st.session_state:
-    st.session_state[f"last_selected_{music}"] = selected_ids
-
-if st.session_state[f"last_selected_{music}"] != selected_ids:
-    st.session_state.confirmed[music] = False
-    st.session_state[f"last_selected_{music}"] = selected_ids
-
-confirmed = st.session_state.confirmed.get(music, False)
-
-if st.button("OK（コメント内容を表示）"):
-    if len(selected_ids) == 5:
-        st.session_state.confirmed[music] = True
-        confirmed = True
-    else:
-        st.warning("5件選択してください。")
-
-if confirmed:
-    st.caption("※ セルをダブルクリックすると全文を確認できます。")
-    st.dataframe(
-        df[df["コメント番号"].isin(selected_ids)][["コメント番号", "コメント"]],
-        hide_index=True,
-        use_container_width=True
-    )
-# =============================
-# 評価順 Top5（仮）
+# 評価順 Top5（固定）
 # =============================
 EVAL_TOP5 = {
     "アイネクライネ": [
@@ -159,88 +89,142 @@ EVAL_TOP5 = {
         "急に聞きたくなって戻ってきちゃった",
         "もう2年か...",
         """マリアで崇拝されるアイドルと母の両方表してるの控えめに言って最高
-    5億再生おめでとうございます！！"""
+5億再生おめでとうございます！！"""
     ]
 }
-st.subheader("評価順Top5")
-st.dataframe(
-    pd.DataFrame({
-        "順位": [1, 2, 3, 4, 5],
-        "コメント": EVAL_TOP5[music]
-    }),
-    hide_index=True,
-    use_container_width=True
-)
-# =============================
-# 設問
-# =============================
-q1 = st.radio(
-    "Q1. 条件に合っているのはどちらですか？",[
-        "評価順の方が良い",
-        "評価順の方がやや良い",
-        "どちらともいえない",
-        "グラフで選んだものがやや良い",
-        "グラフで選んだものが良い"],
-    key=f"q1_{music}",
-    disabled=not confirmed
-)
-q2 = st.text_area(
-    "Q2. その他気になったこと・気づいたこと",
-    key=f"q2_{music}",
-    disabled=not confirmed
-)
-if not confirmed:
-    st.info("※ コメント内容を表示（OK）した後に回答できます。")
 
-if st.button("この楽曲の回答を保存", disabled=not confirmed):
-    if not q1:
-        st.warning("Q1に回答してください。")
+# =============================
+# 提案手法 Top5 取得関数
+# =============================
+def get_proposed_top5(df, condition):
+    if condition == "①":
+        col = "関連性_norm"
+    elif condition == "②":
+        col = "新規性_norm"
     else:
-        st.session_state.responses[music] = {
-            "selected_ids": selected_ids,
-            "q1": q1,
-            "q2": q2
-        }
-        st.success(f"{music} の回答を保存しました。")
+        col = "両立スコア"
+
+    return (
+        df.sort_values(col, ascending=False)
+          .head(5)["コメント"]
+          .tolist()
+    )
+
 # =============================
-# 回答状況
+# 楽曲ごとの評価
 # =============================
-st.subheader("回答状況")
-for m in file_map.keys():
-    st.write("✅" if m in st.session_state.responses else "⬜", m)
+file_map = {
+    "アイネクライネ": "comment2_xy.xlsx",
+    "アイドル": "comment3_xy.xlsx"
+}
+
+for music, file in file_map.items():
+    st.header(music)
+
+    df = pd.read_excel(file)
+
+    proposed_top5 = get_proposed_top5(df, condition)
+    eval_top5 = EVAL_TOP5[music]
+
+    st.subheader("提案手法 Top5")
+    st.dataframe(
+        pd.DataFrame({
+            "順位": [1, 2, 3, 4, 5],
+            "コメント": proposed_top5
+        }),
+        hide_index=True,
+        use_container_width=True
+    )
+
+    st.subheader("評価順 Top5")
+    st.dataframe(
+        pd.DataFrame({
+            "順位": [1, 2, 3, 4, 5],
+            "コメント": eval_top5
+        }),
+        hide_index=True,
+        use_container_width=True
+    )
+
+    confirmed = st.session_state.confirmed.get(music, False)
+
+    if st.button(f"{music}：OK（内容を確認しました）"):
+        st.session_state.confirmed[music] = True
+        confirmed = True
+
+    if confirmed:
+        q1 = st.radio(
+            "Q1. 条件により適切なのはどちらですか？",
+            [
+                "評価順の方が良い",
+                "評価順の方がやや良い",
+                "どちらともいえない",
+                "提案手法の方がやや良い",
+                "提案手法の方が良い"
+            ],
+            key=f"q1_{music}"
+        )
+
+        q2 = st.text_area(
+            "Q2. その他気づいた点",
+            key=f"q2_{music}"
+        )
+
+        if st.button(f"{music}：回答を保存"):
+            if not q1:
+                st.warning("Q1に回答してください。")
+            else:
+                st.session_state.responses[music] = {
+                    "q1": q1,
+                    "q2": q2
+                }
+                st.success(f"{music} の回答を保存しました。")
+
 # =============================
 # 最終送信（CSV追記）
 # =============================
+st.divider()
+
 if st.button("最終送信"):
     if len(st.session_state.responses) != len(file_map):
-        st.warning("すべての楽曲を評価してください。")
+        st.warning("すべての楽曲について回答してください。")
     else:
         new_file = not os.path.exists(LOG_FILE)
+
         with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             if new_file:
-                writer.writerow(["timestamp", "participant_id", "condition", "music", "selected_ids", "Q1", "Q2"])
+                writer.writerow([
+                    "timestamp", "participant_id", "condition",
+                    "music", "Q1", "Q2"
+                ])
             for music, res in st.session_state.responses.items():
                 writer.writerow([
                     datetime.now().isoformat(),
                     st.session_state.participant_id,
-                    st.session_state.condition,
+                    condition,
                     music,
-                    ",".join(map(str, res["selected_ids"])),
                     res["q1"],
                     res["q2"]
                 ])
-        st.success("回答ありがとうございました。")
+
+        st.success("ご協力ありがとうございました。")
 
 # =============================
 # 管理者（目立たない）
 # =============================
 st.divider()
-st.caption("※ 以下気にしないでください。")
+st.caption("※ 以下は管理者用です。")
+
 pw = st.text_input("", type="password")
 if st.button("　"):
     st.session_state.is_admin = (pw == ADMIN_PASSWORD)
 
 if st.session_state.is_admin and os.path.exists(LOG_FILE):
     with open(LOG_FILE, "r", encoding="utf-8") as f:
-        st.download_button("CSVダウンロード", f.read(), "experiment_log.csv", "text/csv")
+        st.download_button(
+            "CSVダウンロード",
+            f.read(),
+            "experiment_log.csv",
+            "text/csv"
+        )
