@@ -12,7 +12,7 @@ from datetime import datetime
 # =============================
 LOG_DIR = "data"
 LOG_FILE = os.path.join(LOG_DIR, "experiment_log.csv")
-ADMIN_PASSWORD = "ehimecho"  # ★必ず変更
+ADMIN_PASSWORD = "ehimecho"
 
 st.set_page_config(layout="wide")
 
