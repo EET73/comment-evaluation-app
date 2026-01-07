@@ -107,13 +107,24 @@ st.pyplot(fig)
 # コメント選択
 # =============================
 st.subheader("コメント選択")
+
 selectable_ids = sorted(df_show["コメント番号"].astype(int).tolist())
 
 selected_ids = st.multiselect(
     "コメント番号を5つ選択してください",
     selectable_ids,
-    max_selections=5
+    max_selections=5,
+    key=f"select_{music}"
 )
+
+# ===== ここが重要 =====
+# 選択が変わったら confirmed をリセット
+if f"last_selected_{music}" not in st.session_state:
+    st.session_state[f"last_selected_{music}"] = selected_ids
+
+if st.session_state[f"last_selected_{music}"] != selected_ids:
+    st.session_state.confirmed[music] = False
+    st.session_state[f"last_selected_{music}"] = selected_ids
 
 confirmed = st.session_state.confirmed.get(music, False)
 
@@ -148,7 +159,7 @@ EVAL_TOP5 = {
         "急に聞きたくなって戻ってきちゃった",
         "もう2年か...",
         """マリアで崇拝されるアイドルと母の両方表してるの控えめに言って最高
-        5億再生おめでとうございます！！"""
+    5億再生おめでとうございます！！"""
     ]
 }
 st.subheader("評価順Top5")
@@ -170,14 +181,18 @@ q1 = st.radio(
         "どちらともいえない",
         "提案手法の方がやや良い",
         "提案手法の方が良い"],
-    key=f"q1_{music}"
+    key=f"q1_{music}",
+    disabled=not confirmed
 )
 q2 = st.text_area(
     "Q2. その他気になったこと・気づいたこと",
-    key=f"q2_{music}"
+    key=f"q2_{music}",
+    disabled=not confirmed
 )
+if not confirmed:
+    st.info("※ コメント内容を表示（OK）した後に回答できます。")
 
-if st.button("この楽曲の回答を保存"):
+if st.button("この楽曲の回答を保存", disabled=not confirmed):
     if not q1:
         st.warning("Q1に回答してください。")
     else:
