@@ -129,6 +129,7 @@ for music, file in file_map.items():
     eval_top5 = EVAL_TOP5[music]
 
     st.subheader("A")
+    st.caption("※ 各コメントはセルをダブルクリックすると全文を確認できます。")
     st.dataframe(
         proposed_top5[["コメント"]].reset_index(drop=True),
         hide_index=True,
@@ -136,6 +137,7 @@ for music, file in file_map.items():
     )
 
     st.subheader("B")
+    st.caption("※ 各コメントはセルをダブルクリックすると全文を確認できます。")
     st.dataframe(
         pd.DataFrame({
             "コメント": eval_top5
