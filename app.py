@@ -14,8 +14,6 @@ LOG_DIR = "data"
 LOG_FILE = os.path.join(LOG_DIR, "experiment_log.csv")
 ADMIN_PASSWORD = "ehimecho"  # ★必ず後で変更
 
-# st.set_page_config(layout="wide")
-
 # =============================
 # 初期化
 # =============================
@@ -29,6 +27,7 @@ if "confirmed" not in st.session_state:
 
 if "selected_ids" not in st.session_state:
     st.session_state.selected_ids = {}
+
 # =============================
 # タイトル・説明
 # =============================
@@ -84,8 +83,6 @@ file_map = {
     }
 }
 
-responses = []
-
 # =============================
 # 評価ループ
 # =============================
@@ -97,12 +94,11 @@ for music, info in file_map.items():
     df = pd.read_excel(info["file"])
 
     # -----------------------------
-    # A側：散布図＋5件選択
+    # 散布図
     # -----------------------------
     st.subheader("コメント分布（番号のみ表示）")
 
-    TOP_N = 70
-    df_show = df.sort_values("新規性_norm", ascending=False).head(TOP_N)
+    df_show = df.sort_values("新規性_norm", ascending=False).head(70)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.scatter(df_show["関連性スコア"], df_show["新規性_IDF"], alpha=0.7)
@@ -119,6 +115,9 @@ for music, info in file_map.items():
     ax.set_ylabel("Novelty")
     st.pyplot(fig)
 
+    # -----------------------------
+    # コメント選択
+    # -----------------------------
     st.subheader("コメント選択（5件）")
 
     selectable_ids = sorted(df_show["コメント番号"].astype(int).tolist())
@@ -137,23 +136,21 @@ for music, info in file_map.items():
             st.warning("5件選択してください。")
 
     # -----------------------------
-    # A側：選択後の評価
+    # 評価
     # -----------------------------
-    if st.session_state.get("confirmed", {}).get(music, False):
+    if st.session_state.confirmed.get(music, False):
         st.subheader("コメントの評価")
-        # A側（選択されたコメント）
-        selected_rows = df[df["コメント番号"].isin(
-            st.session_state.get("selected_ids", {}).get(music, [])
-        )]
+
         eval_items = []
-        for _, row in selected_rows.iterrows():
+
+        for cid in st.session_state.selected_ids[music]:
+            row = df[df["コメント番号"] == cid].iloc[0]
             eval_items.append({
                 "source": "proposed",
-                "comment_number": int(row["コメント番号"]),
+                "comment_number": cid,
                 "comment": row["コメント"]
             })
 
-        # B側（固定コメント）
         for comment in BASELINE_TOP5[music]:
             eval_items.append({
                 "source": "baseline",
@@ -161,19 +158,19 @@ for music, info in file_map.items():
                 "comment": comment
             })
 
-        # 表示順はそのまま（必要なら shuffle も可）
         for i, item in enumerate(eval_items):
             st.write(f"**コメント {i+1}**")
             st.write(item["comment"])
 
             if item["source"] == "proposed":
-                radio_key = f"eval_{music}_A_{item['comment_number']}"
+                key = f"eval_{music}_A_{item['comment_number']}"
             else:
-                radio_key = f"eval_{music}_B_{i}"
-            score = st.radio(
+                key = f"eval_{music}_B_{i}"
+
+            st.radio(
                 "新規性評価",
                 [1, 2, 3, 4, 5],
-                index=None,  # ← 未選択
+                index=None,
                 format_func=lambda x: {
                     1: "1：まったく新規性を感じない",
                     2: "2：あまり新規性を感じない",
@@ -181,58 +178,34 @@ for music, info in file_map.items():
                     4: "4：やや新規性がある",
                     5: "5：非常に新規性がある"
                 }[x],
-                key=radio_key
+                key=key
             )
 
-            responses.append({
-                "music": music,
-                "source": item["source"],      # UIでは見せない
-                "comment_number": item["comment_number"],
-                "score": score
-            })
-
 # =============================
-# 送信
+# 提出
 # =============================
 st.divider()
 
 if st.button("提出"):
-    rows_to_save = []
+    rows = []
     has_error = False
 
     for music in file_map.keys():
-        # A側
         for cid in st.session_state.selected_ids.get(music, []):
-            score = st.session_state.get(f"eval_{music}_A_{cid}", None)
-            # score = st.session_state.get(f"eval_{music}_A_{i}", None)
+            score = st.session_state.get(f"eval_{music}_A_{cid}")
             if score is None:
                 has_error = True
-                break
+            rows.append([datetime.now().isoformat(),
+                         st.session_state.participant_id,
+                         music, "proposed", cid, score])
 
-            rows_to_save.append([
-                datetime.now().isoformat(),
-                st.session_state.participant_id,
-                music,
-                "proposed",
-                cid,
-                score
-            ])
-
-        # B側
         for i in range(len(BASELINE_TOP5[music])):
-            score = st.session_state.get(f"eval_{music}_B_{i}", None)
+            score = st.session_state.get(f"eval_{music}_B_{i}")
             if score is None:
                 has_error = True
-                break
-
-            rows_to_save.append([
-                datetime.now().isoformat(),
-                st.session_state.participant_id,
-                music,
-                "baseline",
-                None,
-                score
-            ])
+            rows.append([datetime.now().isoformat(),
+                         st.session_state.participant_id,
+                         music, "baseline", None, score])
 
     if has_error:
         st.warning("未評価のコメントがあります。")
@@ -249,7 +222,7 @@ if st.button("提出"):
                     "comment_number",
                     "novelty_score"
                 ])
-            writer.writerows(rows_to_save)
+            writer.writerows(rows)
 
         st.success("ご協力ありがとうございました。")
 
@@ -263,7 +236,7 @@ pw = st.text_input("", type="password")
 if st.button("　"):
     st.session_state.is_admin = (pw == ADMIN_PASSWORD)
 
-if st.session_state.get("is_admin", False) and os.path.exists(LOG_FILE):
+if st.session_state.is_admin and os.path.exists(LOG_FILE):
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         st.download_button(
             "CSVダウンロード",
