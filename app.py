@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # =============================
 LOG_DIR = "data"
 LOG_FILE = os.path.join(LOG_DIR, "responses_log.csv")
-
+ADMIN_PASSWORD = "ehimecho"   # ← 追加
 # =============================
 # 初期化
 # =============================
@@ -25,6 +25,10 @@ if "confirmed" not in st.session_state:
 
 if "selected_ids" not in st.session_state:
     st.session_state.selected_ids = {}
+
+if "is_admin" not in st.session_state:
+    st.session_state.is_admin = False
+
 
 # =============================
 # タイトル・説明
