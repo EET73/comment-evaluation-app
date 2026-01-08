@@ -30,36 +30,28 @@ if "is_admin" not in st.session_state:
 # =============================
 # タイトル・説明
 # =============================
-st.title("コメント評価実験（新規性評価）")
+st.title("コメント評価実験（新規性）")
 
 st.markdown("""
-本実験では、楽曲に付与されたコメントの  
-**内容の新規性**について評価していただきます。
+本実験では、楽曲に付与された**個々のコメントの新規性**について評価していただきます。
 
-各楽曲について、以下の2種類のコメント群（A群・B群）が提示されます。
-
-それぞれの一覧を確認した上で、  
-**新規性の観点から適切だと感じたコメント群**を選択してください。
+各楽曲について **10件のコメント** が提示されます。  
+それぞれのコメントを読み、  
+**内容がどの程度ユニークで新規性があると感じるか**を5段階で評価してください。
 """)
 
-# =============================
-# 評価基準（新規性のみ）
-# =============================
 st.info("""
-**評価基準：コメント内容の新規性**
+**新規性の判断基準**
 
-新規性が高いコメントとは、  
-・内容が「あるある」ではない  
-・ユニークな視点・表現がある  
-・自分にはなかった知識、気づき、発見がある  
-
-と感じられるものを指します。
+・「あるある」ではなく独自性がある  
+・ユニークな視点や表現がある  
+・自分にはなかった知識・発見がある  
 """)
 
 # =============================
-# 評価順 Top5（B群：固定）
+# B由来コメント（固定）
 # =============================
-EVAL_TOP5 = {
+BASELINE_TOP5 = {
     "アイネクライネ": [
         "コメント古い順追加してほしい",
         "しんどいことがあった時、友達が下校中に傘をひっくり返して「アイネクライネ！」って一発芸してくれて救われたことある。ありがとう",
@@ -77,16 +69,17 @@ EVAL_TOP5 = {
 }
 
 # =============================
-# A群：提案手法 Top5（新規性のみ）
+# A由来コメント（新規性上位）
 # =============================
 def get_proposed_top5(df):
     return (
         df.sort_values("新規性_norm", ascending=False)
-          .head(5)[["コメント"]]
+          .head(5)["コメント"]
+          .tolist()
     )
 
 # =============================
-# 楽曲ファイル・URL
+# 楽曲ファイル
 # =============================
 file_map = {
     "アイネクライネ": {
@@ -99,74 +92,60 @@ file_map = {
     }
 }
 
-responses = {}
+all_responses = []
 
 # =============================
-# 楽曲ごとの評価
+# 評価ループ
 # =============================
 for music, info in file_map.items():
     st.divider()
     st.subheader(music)
-
-    st.markdown(f"🎧 楽曲URL（未視聴の方はこちら）: {info['url']}")
-    st.caption("※ 表はダブルクリックするとコメント全文を確認できます。")
+    st.markdown(f"🎧 楽曲URL: {info['url']}")
 
     df = pd.read_excel(info["file"])
 
-    proposed_top5 = get_proposed_top5(df)
-    eval_top5 = EVAL_TOP5[music]
+    proposed = get_proposed_top5(df)
+    baseline = BASELINE_TOP5[music]
 
-    # A群
-    st.subheader("A群（新規性スコア上位）")
-    st.dataframe(
-        proposed_top5,
-        hide_index=True,
-        use_container_width=True
+    comments = (
+        [{"source": "proposed", "text": c} for c in proposed] +
+        [{"source": "baseline", "text": c} for c in baseline]
     )
 
-    # B群
-    st.subheader("B群（比較対象）")
-    st.dataframe(
-        pd.DataFrame({"コメント": eval_top5}),
-        hide_index=True,
-        use_container_width=True
-    )
+    st.caption("以下の各コメントについて、新規性を評価してください。")
 
-    # Q1
-    q1 = st.radio(
-        "Q1. 新規性の観点から、どちらが適切だと感じましたか？",
-        [
-            "A群の方が良い",
-            "A群の方がやや良い",
-            "どちらともいえない",
-            "B群の方がやや良い",
-            "B群の方が良い"
-        ],
-        index=None,
-        key=f"q1_{music}"
-    )
+    for i, item in enumerate(comments):
+        st.markdown(f"**コメント {i+1}**")
+        st.write(item["text"])
 
-    # Q2
-    q2 = st.text_area(
-        "Q2. その他気づいた点（任意）",
-        key=f"q2_{music}"
-    )
+        score = st.radio(
+            "新規性の評価",
+            [1, 2, 3, 4, 5],
+            format_func=lambda x: {
+                1: "1：まったく新規性を感じない",
+                2: "2：あまり新規性を感じない",
+                3: "3：どちらともいえない",
+                4: "4：やや新規性がある",
+                5: "5：非常に新規性がある"
+            }[x],
+            key=f"{music}_{i}"
+        )
 
-    responses[music] = {
-        "q1": q1,
-        "q2": q2
-    }
+        all_responses.append({
+            "music": music,
+            "source": item["source"],
+            "comment": item["text"],
+            "score": score
+        })
 
 # =============================
-# 最終送信
+# 送信
 # =============================
 st.divider()
 
 if st.button("提出"):
-    unanswered = [m for m, r in responses.items() if r["q1"] is None]
-
-    if unanswered:
-        st.warning("すべての楽曲について Q1 に回答してください。")
+    if not all_responses:
+        st.warning("評価が未入力です。")
     else:
         new_file = not os.path.exists(LOG_FILE)
 
@@ -177,17 +156,19 @@ if st.button("提出"):
                     "timestamp",
                     "participant_id",
                     "music",
-                    "Q1",
-                    "Q2"
+                    "source",
+                    "comment",
+                    "novelty_score"
                 ])
 
-            for music, r in responses.items():
+            for r in all_responses:
                 writer.writerow([
                     datetime.now().isoformat(),
                     st.session_state.participant_id,
-                    music,
-                    r["q1"],
-                    r["q2"]
+                    r["music"],
+                    r["source"],
+                    r["comment"],
+                    r["score"]
                 ])
 
         st.success("ご協力ありがとうございました。")
