@@ -23,10 +23,11 @@ os.makedirs(LOG_DIR, exist_ok=True)
 if "participant_id" not in st.session_state:
     st.session_state.participant_id = str(uuid.uuid4())[:8]
 
-# 管理者判定用
-if "is_admin" not in st.session_state:
-    st.session_state.is_admin = False
+if "confirmed" not in st.session_state:
+    st.session_state.confirmed = {}
 
+if "selected_ids" not in st.session_state:
+    st.session_state.selected_ids = {}
 # =============================
 # タイトル・説明
 # =============================
