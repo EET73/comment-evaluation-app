@@ -97,10 +97,8 @@ for music, info in file_map.items():
 
     df = pd.read_excel(info["file"])
 
-    # -----------------------------
-    # A側：散布図＋5件選択
-    # -----------------------------
-    st.subheader("コメント分布（番号のみ表示）")
+    # -------- コメント分布（番号のみ） --------
+    st.subheader("コメント分布")
 
     TOP_N = 70
     df_show = df.sort_values("新規性_norm", ascending=False).head(TOP_N)
@@ -120,38 +118,57 @@ for music, info in file_map.items():
     ax.set_ylabel("Novelty")
     st.pyplot(fig)
 
-    st.subheader("コメント選択（5件）")
+    # -------- 5件選択 --------
+    st.subheader("コメント選択")
 
     selectable_ids = sorted(df_show["コメント番号"].astype(int).tolist())
     selected = st.multiselect(
-        "コメント番号を5つ選択してください",
+        "番号を5つ選択してください",
         selectable_ids,
         max_selections=5,
         key=f"select_{music}"
     )
 
-    if st.button("OK（選択したコメントを表示）", key=f"ok_{music}"):
+    if st.button("OK", key=f"ok_{music}"):
         if len(selected) == 5:
             st.session_state.confirmed[music] = True
             st.session_state.selected_ids[music] = selected
         else:
             st.warning("5件選択してください。")
 
-    # -----------------------------
-    # A側：選択後の評価
-    # -----------------------------
+    # -------- 評価表示 --------
     if st.session_state.confirmed.get(music, False):
-        st.subheader("選択したコメントの評価")
+        st.subheader("コメント評価")
 
+        eval_items = []
+
+        # 選択コメント
         selected_rows = df[df["コメント番号"].isin(st.session_state.selected_ids[music])]
-
         for _, row in selected_rows.iterrows():
-            st.write(f"**コメント番号 {int(row['コメント番号'])}**")
-            st.write(row["コメント"])
+            eval_items.append({
+                "music": music,
+                "source": "proposed",
+                "comment_number": int(row["コメント番号"]),
+                "comment": row["コメント"]
+            })
+
+        # 比較コメント
+        for c in BASELINE_TOP5[music]:
+            eval_items.append({
+                "music": music,
+                "source": "baseline",
+                "comment_number": None,
+                "comment": c
+            })
+
+        # 表示（区別しない）
+        for i, item in enumerate(eval_items):
+            st.write(item["comment"])
 
             score = st.radio(
                 "新規性評価",
                 [1, 2, 3, 4, 5],
+                index=None,   # ★ 未選択状態
                 format_func=lambda x: {
                     1: "1：まったく新規性を感じない",
                     2: "2：あまり新規性を感じない",
@@ -159,80 +176,51 @@ for music, info in file_map.items():
                     4: "4：やや新規性がある",
                     5: "5：非常に新規性がある"
                 }[x],
-                key=f"a_{music}_{row['コメント番号']}"
+                key=f"eval_{music}_{i}"
             )
 
             responses.append({
                 "music": music,
-                "source": "proposed",
-                "comment_number": int(row["コメント番号"]),
-                "comment": row["コメント"],
+                "source": item["source"],
+                "comment_number": item["comment_number"],
+                "comment": item["comment"],
                 "score": score
             })
 
-    # -----------------------------
-    # B側：固定コメント評価
-    # -----------------------------
-    st.subheader("比較対象コメントの評価")
-
-    for i, comment in enumerate(BASELINE_TOP5[music]):
-        st.write(f"**比較コメント {i+1}**")
-        st.write(comment)
-
-        score = st.radio(
-            "新規性評価",
-            [1, 2, 3, 4, 5],
-            format_func=lambda x: {
-                1: "1：まったく新規性を感じない",
-                2: "2：あまり新規性を感じない",
-                3: "3：どちらともいえない",
-                4: "4：やや新規性がある",
-                5: "5：非常に新規性がある"
-            }[x],
-            key=f"b_{music}_{i}"
-        )
-
-        responses.append({
-            "music": music,
-            "source": "baseline",
-            "comment_number": None,
-            "comment": comment,
-            "score": score
-        })
-
 # =============================
-# 送信
+# 提出
 # =============================
 st.divider()
 
 if st.button("提出"):
-    new_file = not os.path.exists(LOG_FILE)
+    if any(r["score"] is None for r in responses):
+        st.warning("未評価のコメントがあります。")
+    else:
+        new_file = not os.path.exists(LOG_FILE)
+        with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if new_file:
+                writer.writerow([
+                    "timestamp",
+                    "participant_id",
+                    "music",
+                    "source",
+                    "comment_number",
+                    "comment",
+                    "novelty_score"
+                ])
+            for r in responses:
+                writer.writerow([
+                    datetime.now().isoformat(),
+                    st.session_state.participant_id,
+                    r["music"],
+                    r["source"],
+                    r["comment_number"],
+                    r["comment"],
+                    r["score"]
+                ])
 
-    with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        if new_file:
-            writer.writerow([
-                "timestamp",
-                "participant_id",
-                "music",
-                "source",
-                "comment_number",
-                "comment",
-                "novelty_score"
-            ])
-
-        for r in responses:
-            writer.writerow([
-                datetime.now().isoformat(),
-                st.session_state.participant_id,
-                r["music"],
-                r["source"],
-                r["comment_number"],
-                r["comment"],
-                r["score"]
-            ])
-
-    st.success("ご協力ありがとうございました。")
+        st.success("ご協力ありがとうございました。")
 
 
 # =============================
