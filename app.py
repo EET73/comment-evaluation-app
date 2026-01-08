@@ -9,10 +9,8 @@ import matplotlib.pyplot as plt
 # =============================
 # 設定
 # =============================
-st.session_state.setdefault("is_admin", False)
 LOG_DIR = "data"
-LOG_FILE = os.path.join(LOG_DIR, "experiment_log.csv")
-ADMIN_PASSWORD = "ehimecho"  # ★必ず後で変更
+LOG_FILE = os.path.join(LOG_DIR, "responses_log.csv")
 
 # =============================
 # 初期化
@@ -83,6 +81,8 @@ file_map = {
     }
 }
 
+responses = []
+
 # =============================
 # 評価ループ
 # =============================
@@ -94,11 +94,12 @@ for music, info in file_map.items():
     df = pd.read_excel(info["file"])
 
     # -----------------------------
-    # 散布図
+    # A側：散布図＋5件選択
     # -----------------------------
     st.subheader("コメント分布（番号のみ表示）")
 
-    df_show = df.sort_values("新規性_norm", ascending=False).head(70)
+    TOP_N = 70
+    df_show = df.sort_values("新規性_norm", ascending=False).head(TOP_N)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.scatter(df_show["関連性スコア"], df_show["新規性_IDF"], alpha=0.7)
@@ -115,9 +116,6 @@ for music, info in file_map.items():
     ax.set_ylabel("Novelty")
     st.pyplot(fig)
 
-    # -----------------------------
-    # コメント選択
-    # -----------------------------
     st.subheader("コメント選択（5件）")
 
     selectable_ids = sorted(df_show["コメント番号"].astype(int).tolist())
@@ -136,42 +134,20 @@ for music, info in file_map.items():
             st.warning("5件選択してください。")
 
     # -----------------------------
-    # 評価
+    # A側：選択後の評価
     # -----------------------------
-    if st.session_state.get("confirmed", {}).get(music, False):
-        st.subheader("コメントの評価")
-    
-        # A側（選択されたコメント）
-        selected_rows = df[df["コメント番号"].isin(
-            st.session_state.get("selected_ids", {}).get(music, [])
-        )]
-    
-        eval_items = []
-    
+    if st.session_state.confirmed.get(music, False):
+        st.subheader("選択したコメントの評価")
+
+        selected_rows = df[df["コメント番号"].isin(st.session_state.selected_ids[music])]
+
         for _, row in selected_rows.iterrows():
-            eval_items.append({
-                "source": "proposed",
-                "comment_number": int(row["コメント番号"]),
-                "comment": row["コメント"]
-            })
-    
-        # B側（固定コメント）
-        for comment in BASELINE_TOP5[music]:
-            eval_items.append({
-                "source": "baseline",
-                "comment_number": None,
-                "comment": comment
-            })
-    
-        # 表示順はそのまま（必要なら shuffle も可）
-        for i, item in enumerate(eval_items):
-            st.write(f"**コメント {i+1}**")
-            st.write(item["comment"])
-    
+            st.write(f"**コメント番号 {int(row['コメント番号'])}**")
+            st.write(row["コメント"])
+
             score = st.radio(
                 "新規性評価",
                 [1, 2, 3, 4, 5],
-                index=None,  # ← 未選択
                 format_func=lambda x: {
                     1: "1：まったく新規性を感じない",
                     2: "2：あまり新規性を感じない",
@@ -179,18 +155,49 @@ for music, info in file_map.items():
                     4: "4：やや新規性がある",
                     5: "5：非常に新規性がある"
                 }[x],
-                key=f"eval_{music}_{i}"
+                key=f"a_{music}_{row['コメント番号']}"
             )
-    
+
             responses.append({
                 "music": music,
-                "source": item["source"],      # UIでは見せない
-                "comment_number": item["comment_number"],
-                "comment": item["comment"],
+                "source": "proposed",
+                "comment_number": int(row["コメント番号"]),
+                "comment": row["コメント"],
                 "score": score
             })
+
+    # -----------------------------
+    # B側：固定コメント評価
+    # -----------------------------
+    st.subheader("比較対象コメントの評価")
+
+    for i, comment in enumerate(BASELINE_TOP5[music]):
+        st.write(f"**比較コメント {i+1}**")
+        st.write(comment)
+
+        score = st.radio(
+            "新規性評価",
+            [1, 2, 3, 4, 5],
+            format_func=lambda x: {
+                1: "1：まったく新規性を感じない",
+                2: "2：あまり新規性を感じない",
+                3: "3：どちらともいえない",
+                4: "4：やや新規性がある",
+                5: "5：非常に新規性がある"
+            }[x],
+            key=f"b_{music}_{i}"
+        )
+
+        responses.append({
+            "music": music,
+            "source": "baseline",
+            "comment_number": None,
+            "comment": comment,
+            "score": score
+        })
+
 # =============================
-# 提出
+# 送信
 # =============================
 st.divider()
 
@@ -222,6 +229,7 @@ if st.button("提出"):
             ])
 
     st.success("ご協力ありがとうございました。")
+
 
 # =============================
 # 管理者用
