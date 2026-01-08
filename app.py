@@ -68,15 +68,15 @@ BASELINE_TOP5 = {
     ]
 }
 
-# =============================
-# A由来コメント（新規性上位）
-# =============================
-def get_proposed_top5(df):
-    return (
-        df.sort_values("新規性_norm", ascending=False)
-          .head(5)["コメント"]
-          .tolist()
-    )
+# # =============================
+# # A由来コメント（新規性上位）
+# # =============================
+# def get_proposed_top5(df):
+#     return (
+#         df.sort_values("新規性_norm", ascending=False)
+#           .head(5)["コメント"]
+#           .tolist()
+#     )
 
 # =============================
 # 楽曲ファイル
@@ -92,7 +92,7 @@ file_map = {
     }
 }
 
-all_responses = []
+responses = []
 
 # =============================
 # 評価ループ
@@ -104,22 +104,90 @@ for music, info in file_map.items():
 
     df = pd.read_excel(info["file"])
 
-    proposed = get_proposed_top5(df)
-    baseline = BASELINE_TOP5[music]
+    # -----------------------------
+    # A側：散布図＋5件選択
+    # -----------------------------
+    st.subheader("コメント分布（番号のみ表示）")
 
-    comments = (
-        [{"source": "proposed", "text": c} for c in proposed] +
-        [{"source": "baseline", "text": c} for c in baseline]
+    TOP_N = 70
+    df_show = df.sort_values("新規性_norm", ascending=False).head(TOP_N)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.scatter(df_show["関連性スコア"], df_show["新規性_IDF"], alpha=0.7)
+
+    for _, row in df_show.iterrows():
+        ax.text(
+            row["関連性スコア"],
+            row["新規性_IDF"],
+            str(int(row["コメント番号"])),
+            fontsize=4
+        )
+
+    ax.set_xlabel("Relevance")
+    ax.set_ylabel("Novelty")
+    st.pyplot(fig)
+
+    st.subheader("コメント選択（5件）")
+
+    selectable_ids = sorted(df_show["コメント番号"].astype(int).tolist())
+    selected = st.multiselect(
+        "コメント番号を5つ選択してください",
+        selectable_ids,
+        max_selections=5,
+        key=f"select_{music}"
     )
 
-    st.caption("以下の各コメントについて、新規性を評価してください。")
+    if st.button("OK（選択したコメントを表示）", key=f"ok_{music}"):
+        if len(selected) == 5:
+            st.session_state.confirmed[music] = True
+            st.session_state.selected_ids[music] = selected
+        else:
+            st.warning("5件選択してください。")
 
-    for i, item in enumerate(comments):
-        st.markdown(f"**コメント {i+1}**")
-        st.write(item["text"])
+    # -----------------------------
+    # A側：選択後の評価
+    # -----------------------------
+    if st.session_state.confirmed.get(music, False):
+        st.subheader("選択したコメントの評価")
+
+        selected_rows = df[df["コメント番号"].isin(st.session_state.selected_ids[music])]
+
+        for _, row in selected_rows.iterrows():
+            st.write(f"**コメント番号 {int(row['コメント番号'])}**")
+            st.write(row["コメント"])
+
+            score = st.radio(
+                "新規性評価",
+                [1, 2, 3, 4, 5],
+                format_func=lambda x: {
+                    1: "1：まったく新規性を感じない",
+                    2: "2：あまり新規性を感じない",
+                    3: "3：どちらともいえない",
+                    4: "4：やや新規性がある",
+                    5: "5：非常に新規性がある"
+                }[x],
+                key=f"a_{music}_{row['コメント番号']}"
+            )
+
+            responses.append({
+                "music": music,
+                "source": "proposed",
+                "comment_number": int(row["コメント番号"]),
+                "comment": row["コメント"],
+                "score": score
+            })
+
+    # -----------------------------
+    # B側：固定コメント評価
+    # -----------------------------
+    st.subheader("比較対象コメントの評価")
+
+    for i, comment in enumerate(BASELINE_TOP5[music]):
+        st.write(f"**比較コメント {i+1}**")
+        st.write(comment)
 
         score = st.radio(
-            "新規性の評価",
+            "新規性評価",
             [1, 2, 3, 4, 5],
             format_func=lambda x: {
                 1: "1：まったく新規性を感じない",
@@ -128,13 +196,14 @@ for music, info in file_map.items():
                 4: "4：やや新規性がある",
                 5: "5：非常に新規性がある"
             }[x],
-            key=f"{music}_{i}"
+            key=f"b_{music}_{i}"
         )
 
-        all_responses.append({
+        responses.append({
             "music": music,
-            "source": item["source"],
-            "comment": item["text"],
+            "source": "baseline",
+            "comment_number": None,
+            "comment": comment,
             "score": score
         })
 
@@ -144,34 +213,34 @@ for music, info in file_map.items():
 st.divider()
 
 if st.button("提出"):
-    if not all_responses:
-        st.warning("評価が未入力です。")
-    else:
-        new_file = not os.path.exists(LOG_FILE)
+    new_file = not os.path.exists(LOG_FILE)
 
-        with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            if new_file:
-                writer.writerow([
-                    "timestamp",
-                    "participant_id",
-                    "music",
-                    "source",
-                    "comment",
-                    "novelty_score"
-                ])
+    with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if new_file:
+            writer.writerow([
+                "timestamp",
+                "participant_id",
+                "music",
+                "source",
+                "comment_number",
+                "comment",
+                "novelty_score"
+            ])
 
-            for r in all_responses:
-                writer.writerow([
-                    datetime.now().isoformat(),
-                    st.session_state.participant_id,
-                    r["music"],
-                    r["source"],
-                    r["comment"],
-                    r["score"]
-                ])
+        for r in responses:
+            writer.writerow([
+                datetime.now().isoformat(),
+                st.session_state.participant_id,
+                r["music"],
+                r["source"],
+                r["comment_number"],
+                r["comment"],
+                r["score"]
+            ])
 
-        st.success("ご協力ありがとうございました。")
+    st.success("ご協力ありがとうございました。")
+
 
 # =============================
 # 管理者用
