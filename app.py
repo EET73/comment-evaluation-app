@@ -204,6 +204,7 @@ if st.button("提出"):
         # A側
         for cid in st.session_state.selected_ids.get(music, []):
             score = st.session_state.get(f"eval_{music}_A_{cid}", None)
+            # score = st.session_state.get(f"eval_{music}_A_{i}", None)
             if score is None:
                 has_error = True
                 break
@@ -219,7 +220,7 @@ if st.button("提出"):
 
         # B側
         for i in range(len(BASELINE_TOP5[music])):
-            score = st.session_state.get(f"eval_{music}_B_{cid}", None)
+            score = st.session_state.get(f"eval_{music}_B_{i}", None)
             if score is None:
                 has_error = True
                 break
