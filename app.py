@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 # =============================
 # 設定
 # =============================
+st.session_state.setdefault("is_admin", False)
 LOG_DIR = "data"
 LOG_FILE = os.path.join(LOG_DIR, "experiment_log.csv")
 ADMIN_PASSWORD = "ehimecho"  # ★必ず後で変更
@@ -232,7 +233,7 @@ pw = st.text_input("", type="password")
 if st.button("　"):
     st.session_state.is_admin = (pw == ADMIN_PASSWORD)
 
-if st.session_state.is_admin and os.path.exists(LOG_FILE):
+if st.session_state.get("is_admin", False) and os.path.exists(LOG_FILE):
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         st.download_button(
             "CSVダウンロード",
