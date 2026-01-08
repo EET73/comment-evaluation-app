@@ -166,6 +166,10 @@ for music, info in file_map.items():
             st.write(f"**コメント {i+1}**")
             st.write(item["comment"])
 
+            if item["source"] == "proposed":
+                radio_key = f"eval_{music}_A_{item['comment_number']}"
+            else:
+                radio_key = f"eval_{music}_B_{i}"
             score = st.radio(
                 "新規性評価",
                 [1, 2, 3, 4, 5],
@@ -177,7 +181,7 @@ for music, info in file_map.items():
                     4: "4：やや新規性がある",
                     5: "5：非常に新規性がある"
                 }[x],
-                key=f"eval_{music}_{i}"
+                key=radio_key
             )
 
             responses.append({
@@ -215,7 +219,7 @@ if st.button("提出"):
 
         # B側
         for i in range(len(BASELINE_TOP5[music])):
-            score = st.session_state.get(f"eval_{music}_B_{i}", None)
+            score = st.session_state.get(f"eval_{music}_B_{cid}", None)
             if score is None:
                 has_error = True
                 break
