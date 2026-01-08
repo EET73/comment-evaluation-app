@@ -193,32 +193,42 @@ for music, info in file_map.items():
 st.divider()
 
 if st.button("提出"):
+    # 評価画面がまだ出ていない楽曲がある場合
+    for music in file_map.keys():
+        if not st.session_state.confirmed.get(music, False):
+            st.warning("すべてのコメントを選択・評価してください。")
+            st.stop()
+
+    # スコア未入力チェック
     if any(r["score"] is None for r in responses):
         st.warning("未評価のコメントがあります。")
-    else:
-        new_file = not os.path.exists(LOG_FILE)
-        with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            if new_file:
-                writer.writerow([
-                    "timestamp",
-                    "participant_id",
-                    "music",
-                    "source",
-                    "comment_number",
-                    "comment",
-                    "novelty_score"
-                ])
-            for r in responses:
-                writer.writerow([
-                    datetime.now().isoformat(),
-                    st.session_state.participant_id,
-                    r["music"],
-                    r["source"],
-                    r["comment_number"],
-                    r["comment"],
-                    r["score"]
-                ])
+        st.stop()
+
+    # 保存
+    new_file = not os.path.exists(LOG_FILE)
+    with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if new_file:
+            writer.writerow([
+                "timestamp",
+                "participant_id",
+                "music",
+                "source",
+                "comment_number",
+                "comment",
+                "novelty_score"
+            ])
+        for r in responses:
+            writer.writerow([
+                datetime.now().isoformat(),
+                st.session_state.participant_id,
+                r["music"],
+                r["source"],
+                r["comment_number"],
+                r["comment"],
+                r["score"]
+            ])
+
 
         st.success("ご協力ありがとうございました。")
 
