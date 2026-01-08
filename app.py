@@ -184,7 +184,6 @@ for music, info in file_map.items():
                 "music": music,
                 "source": item["source"],      # UIでは見せない
                 "comment_number": item["comment_number"],
-                "comment": item["comment"],
                 "score": score
             })
 
@@ -205,7 +204,6 @@ if st.button("提出"):
                 "music",
                 "source",
                 "comment_number",
-                "comment",
                 "novelty_score"
             ])
 
@@ -216,7 +214,6 @@ if st.button("提出"):
                 r["music"],
                 r["source"],
                 r["comment_number"],
-                r["comment"],
                 r["score"]
             ])
 
