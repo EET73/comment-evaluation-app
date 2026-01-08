@@ -138,41 +138,40 @@ for music, info in file_map.items():
     # -----------------------------
     # 評価
     # -----------------------------
-    if st.session_state.confirmed.get(music, False):
+    if st.session_state.get("confirmed", {}).get(music, False):
         st.subheader("コメントの評価")
-
+    
+        # A側（選択されたコメント）
+        selected_rows = df[df["コメント番号"].isin(
+            st.session_state.get("selected_ids", {}).get(music, [])
+        )]
+    
         eval_items = []
-
-        # A側
-        for cid in st.session_state.selected_ids[music]:
-            row = df[df["コメント番号"] == cid].iloc[0]
+    
+        for _, row in selected_rows.iterrows():
             eval_items.append({
                 "source": "proposed",
-                "comment_number": cid,
+                "comment_number": int(row["コメント番号"]),
                 "comment": row["コメント"]
             })
-
-        # B側
+    
+        # B側（固定コメント）
         for comment in BASELINE_TOP5[music]:
             eval_items.append({
                 "source": "baseline",
                 "comment_number": None,
                 "comment": comment
             })
-
+    
+        # 表示順はそのまま（必要なら shuffle も可）
         for i, item in enumerate(eval_items):
             st.write(f"**コメント {i+1}**")
             st.write(item["comment"])
-
-            if item["source"] == "proposed":
-                key = f"eval_{music}_A_{item['comment_number']}"
-            else:
-                key = f"eval_{music}_B_{i}"
-
-            st.radio(
+    
+            score = st.radio(
                 "新規性評価",
                 [1, 2, 3, 4, 5],
-                index=None,
+                index=None,  # ← 未選択
                 format_func=lambda x: {
                     1: "1：まったく新規性を感じない",
                     2: "2：あまり新規性を感じない",
@@ -180,73 +179,49 @@ for music, info in file_map.items():
                     4: "4：やや新規性がある",
                     5: "5：非常に新規性がある"
                 }[x],
-                key=key
+                key=f"eval_{music}_{i}"
             )
-
+    
+            responses.append({
+                "music": music,
+                "source": item["source"],      # UIでは見せない
+                "comment_number": item["comment_number"],
+                "comment": item["comment"],
+                "score": score
+            })
 # =============================
 # 提出
 # =============================
 st.divider()
 
 if st.button("提出"):
-    rows = []
-    has_error = False
+    new_file = not os.path.exists(LOG_FILE)
 
-    for music in file_map.keys():
-        # A側
-        for cid in st.session_state.selected_ids.get(music, []):
-            score = st.session_state.get(f"eval_{music}_A_{cid}")
-            if score is None:
-                has_error = True
-            comment = (
-                pd.read_excel(file_map[music]["file"])
-                .query("コメント番号 == @cid")["コメント"]
-                .iloc[0]
-            )
-            rows.append([
-                datetime.now().isoformat(),
-                st.session_state.participant_id,
-                music,
-                "proposed",
-                cid,
-                comment,
-                score
+    with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if new_file:
+            writer.writerow([
+                "timestamp",
+                "participant_id",
+                "music",
+                "source",
+                "comment_number",
+                "comment",
+                "novelty_score"
             ])
 
-        # B側
-        for i, comment in enumerate(BASELINE_TOP5[music]):
-            score = st.session_state.get(f"eval_{music}_B_{i}")
-            if score is None:
-                has_error = True
-            rows.append([
+        for r in responses:
+            writer.writerow([
                 datetime.now().isoformat(),
                 st.session_state.participant_id,
-                music,
-                "baseline",
-                None,
-                comment,
-                score
+                r["music"],
+                r["source"],
+                r["comment_number"],
+                r["comment"],
+                r["score"]
             ])
 
-    if has_error:
-        st.warning("未評価のコメントがあります。")
-    else:
-        new_file = not os.path.exists(LOG_FILE)
-        with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            if new_file:
-                writer.writerow([
-                    "timestamp",
-                    "participant_id",
-                    "music",
-                    "source",
-                    "comment_number",
-                    "comment",
-                    "novelty_score"
-                ])
-            writer.writerows(rows)
-
-        st.success("ご協力ありがとうございました。")
+    st.success("ご協力ありがとうございました。")
 
 # =============================
 # 管理者用
