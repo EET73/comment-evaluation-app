@@ -138,18 +138,37 @@ for music, info in file_map.items():
     # -----------------------------
     # A側：選択後の評価
     # -----------------------------
-    if st.session_state.confirmed.get(music, False):
-        st.subheader("選択したコメントの評価")
-
-        selected_rows = df[df["コメント番号"].isin(st.session_state.selected_ids[music])]
-
+    if st.session_state.get("confirmed", {}).get(music, False):
+        st.subheader("コメントの評価")
+        # A側（選択されたコメント）
+        selected_rows = df[df["コメント番号"].isin(
+            st.session_state.get("selected_ids", {}).get(music, [])
+        )]
+        eval_items = []
         for _, row in selected_rows.iterrows():
-            st.write(f"**コメント番号 {int(row['コメント番号'])}**")
-            st.write(row["コメント"])
+            eval_items.append({
+                "source": "proposed",
+                "comment_number": int(row["コメント番号"]),
+                "comment": row["コメント"]
+            })
+
+        # B側（固定コメント）
+        for comment in BASELINE_TOP5[music]:
+            eval_items.append({
+                "source": "baseline",
+                "comment_number": None,
+                "comment": comment
+            })
+
+        # 表示順はそのまま（必要なら shuffle も可）
+        for i, item in enumerate(eval_items):
+            st.write(f"**コメント {i+1}**")
+            st.write(item["comment"])
 
             score = st.radio(
                 "新規性評価",
                 [1, 2, 3, 4, 5],
+                index=None,  # ← 未選択
                 format_func=lambda x: {
                     1: "1：まったく新規性を感じない",
                     2: "2：あまり新規性を感じない",
@@ -157,46 +176,16 @@ for music, info in file_map.items():
                     4: "4：やや新規性がある",
                     5: "5：非常に新規性がある"
                 }[x],
-                key=f"a_{music}_{row['コメント番号']}"
+                key=f"eval_{music}_{i}"
             )
 
             responses.append({
                 "music": music,
-                "source": "proposed",
-                "comment_number": int(row["コメント番号"]),
-                "comment": row["コメント"],
+                "source": item["source"],      # UIでは見せない
+                "comment_number": item["comment_number"],
+                "comment": item["comment"],
                 "score": score
             })
-
-    # -----------------------------
-    # B側：固定コメント評価
-    # -----------------------------
-    st.subheader("比較対象コメントの評価")
-
-    for i, comment in enumerate(BASELINE_TOP5[music]):
-        st.write(f"**比較コメント {i+1}**")
-        st.write(comment)
-
-        score = st.radio(
-            "新規性評価",
-            [1, 2, 3, 4, 5],
-            format_func=lambda x: {
-                1: "1：まったく新規性を感じない",
-                2: "2：あまり新規性を感じない",
-                3: "3：どちらともいえない",
-                4: "4：やや新規性がある",
-                5: "5：非常に新規性がある"
-            }[x],
-            key=f"b_{music}_{i}"
-        )
-
-        responses.append({
-            "music": music,
-            "source": "baseline",
-            "comment_number": None,
-            "comment": comment,
-            "score": score
-        })
 
 # =============================
 # 送信
