@@ -5,6 +5,7 @@ import csv
 import uuid
 import os
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 # =============================
 # 設定
