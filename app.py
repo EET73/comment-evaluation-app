@@ -143,6 +143,7 @@ for music, info in file_map.items():
 
         eval_items = []
 
+        # A側
         for cid in st.session_state.selected_ids[music]:
             row = df[df["コメント番号"] == cid].iloc[0]
             eval_items.append({
@@ -151,6 +152,7 @@ for music, info in file_map.items():
                 "comment": row["コメント"]
             })
 
+        # B側
         for comment in BASELINE_TOP5[music]:
             eval_items.append({
                 "source": "baseline",
@@ -191,21 +193,40 @@ if st.button("提出"):
     has_error = False
 
     for music in file_map.keys():
+        # A側
         for cid in st.session_state.selected_ids.get(music, []):
             score = st.session_state.get(f"eval_{music}_A_{cid}")
             if score is None:
                 has_error = True
-            rows.append([datetime.now().isoformat(),
-                         st.session_state.participant_id,
-                         music, "proposed", cid, score])
+            comment = (
+                pd.read_excel(file_map[music]["file"])
+                .query("コメント番号 == @cid")["コメント"]
+                .iloc[0]
+            )
+            rows.append([
+                datetime.now().isoformat(),
+                st.session_state.participant_id,
+                music,
+                "proposed",
+                cid,
+                comment,
+                score
+            ])
 
-        for i in range(len(BASELINE_TOP5[music])):
+        # B側
+        for i, comment in enumerate(BASELINE_TOP5[music]):
             score = st.session_state.get(f"eval_{music}_B_{i}")
             if score is None:
                 has_error = True
-            rows.append([datetime.now().isoformat(),
-                         st.session_state.participant_id,
-                         music, "baseline", None, score])
+            rows.append([
+                datetime.now().isoformat(),
+                st.session_state.participant_id,
+                music,
+                "baseline",
+                None,
+                comment,
+                score
+            ])
 
     if has_error:
         st.warning("未評価のコメントがあります。")
@@ -220,6 +241,7 @@ if st.button("提出"):
                     "music",
                     "source",
                     "comment_number",
+                    "comment",
                     "novelty_score"
                 ])
             writer.writerows(rows)
@@ -243,4 +265,6 @@ if st.session_state.is_admin and os.path.exists(LOG_FILE):
             f.read(),
             "experiment_log.csv",
             "text/csv"
+        )
+
         )
