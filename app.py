@@ -29,6 +29,9 @@ if "selected_ids" not in st.session_state:
 if "is_admin" not in st.session_state:
     st.session_state.is_admin = False
 
+if "responses" not in st.session_state:
+    st.session_state.responses = {}
+
 
 # =============================
 # タイトル・説明
@@ -60,7 +63,7 @@ BASELINE_TOP5 = {
         "ふと急にアイネクライネ聴きたくなる時あるよね。",
         "おそらくIRIS OUT効果でTOP100入りしてるんだろうけど、この曲の何がすごいって作詞作曲だけじゃなくてMVのイラストも米津さんなんよね。",
         '"いつか来るお別れを育てて歩く"この表現すごい...',
-        "歌詞
+        """歌詞
 作詞：Kenshi Yonezu
 作曲：Kenshi Yonezu
 あたしあなたに会えて本当に嬉しいのに
@@ -112,10 +115,10 @@ BASELINE_TOP5 = {
 あたしの名前を呼んでくれた
 
 あなたの名前を呼んでいいかな
-(コピペ)",
-        "Lemonに加えてアイネクライネまで
+(コピペ)""",
+        """Lemonに加えてアイネクライネまで
 Top100に入り込んでくるとは。
-やっぱ昔の曲がまだまだ人気なのいいよな",
+やっぱ昔の曲がまだまだ人気なのいいよな""",
         "「嬉し涙」のことを「目の前の全てがぼやけては溶けていくような奇跡」って表現する才能が凄まじい…",
         "Lemonが24位、アイネクライネが89位に復帰してるの恐ろしいな",
         "ふと急にアイネクライネが聴きたくなる時あるよね。"
@@ -128,12 +131,12 @@ Top100に入り込んでくるとは。
         "マリアで崇拝されるアイドルと母の両方表してるの控えめに言って最高",
         "推しの子が好きすぎてオファー来る前から勝手に曲作ってたぐらいですって話聞いて、この原作とのシンクロ感にめっちゃ納得",
         "2番はただの妬みだと思ってたけどニノのところ読んでからメンバーからも偶像として完璧を求められてたんだなと苦しくなる。「弱いとこなんて見せちゃダメダメ」「唯一無二じゃなくちゃいやいや」「それこそ本物の愛（アイ）」って歪んだ感情すぎて好きすぎる。ヒット曲なのに闇深いところが大好き。",
-        "「やっと言えた｣
+        """「やっと言えた｣
 ｢これは絶対嘘じゃない｣
 ｢愛してる｣
-これを最後に持ってくるの天才すぎる",
-        "アイドルという曲名にそぐわない不気味さを兼ね備えた｢推しの子｣という作品をしっかり取入れた神曲
-控えめに言って最強",
+これを最後に持ってくるの天才すぎる""",
+        """アイドルという曲名にそぐわない不気味さを兼ね備えた｢推しの子｣という作品をしっかり取入れた神曲
+控えめに言って最強""",
         "ayaseの作曲センス限界突破しててやばい"
     ]
 }
@@ -246,13 +249,21 @@ for music, info in file_map.items():
                 key=f"eval_{music}_{i}"
             )
 
-            responses.append({
+            st.session_state.responses[(music, i)] = {
                 "music": music,
                 "source": item["source"],
                 "comment_number": item["comment_number"],
                 "comment": item["comment"],
                 "score": score
-            })
+            }
+
+            # responses.append({
+            #     "music": music,
+            #     "source": item["source"],
+            #     "comment_number": item["comment_number"],
+            #     "comment": item["comment"],
+            #     "score": score
+            # })
 
 # =============================
 # 提出
@@ -267,6 +278,7 @@ if st.button("提出"):
             st.stop()
 
     # スコア未入力チェック
+    responses = st.session_state.responses.values()
     if any(r["score"] is None for r in responses):
         st.warning("未評価のコメントがあります。")
         st.stop()
@@ -295,7 +307,6 @@ if st.button("提出"):
                 r["comment"],
                 r["score"]
             ])
-
 
         st.success("ご協力ありがとうございました。")
 
