@@ -193,11 +193,44 @@ for music, info in file_map.items():
 st.divider()
 
 if st.button("提出"):
-    new_file = not os.path.exists(LOG_FILE)
+    rows_to_save = []
+
+    for music, info in file_map.items():
+        # A側（選択コメント）
+        for cid in st.session_state.selected_ids.get(music, []):
+            score = st.session_state.get(f"eval_{music}_{cid}", None)
+            if score is None:
+                st.warning("未評価のコメントがあります。")
+                st.stop()
+
+            rows_to_save.append([
+                datetime.now().isoformat(),
+                st.session_state.participant_id,
+                music,
+                "proposed",
+                cid,
+                score
+            ])
+
+        # B側（固定コメント）
+        for i in range(len(BASELINE_TOP5[music])):
+            score = st.session_state.get(f"eval_{music}_b{i}", None)
+            if score is None:
+                st.warning("未評価のコメントがあります。")
+                st.stop()
+
+            rows_to_save.append([
+                datetime.now().isoformat(),
+                st.session_state.participant_id,
+                music,
+                "baseline",
+                None,
+                score
+            ])
 
     with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        if new_file:
+        if not os.path.exists(LOG_FILE):
             writer.writerow([
                 "timestamp",
                 "participant_id",
@@ -206,16 +239,7 @@ if st.button("提出"):
                 "comment_number",
                 "novelty_score"
             ])
-
-        for r in responses:
-            writer.writerow([
-                datetime.now().isoformat(),
-                st.session_state.participant_id,
-                r["music"],
-                r["source"],
-                r["comment_number"],
-                r["score"]
-            ])
+        writer.writerows(rows_to_save)
 
     st.success("ご協力ありがとうございました。")
 
