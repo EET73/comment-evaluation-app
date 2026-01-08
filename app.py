@@ -194,14 +194,15 @@ st.divider()
 
 if st.button("提出"):
     rows_to_save = []
+    has_error = False
 
-    for music, info in file_map.items():
-        # A側（選択コメント）
+    for music in file_map.keys():
+        # A側
         for cid in st.session_state.selected_ids.get(music, []):
-            score = st.session_state.get(f"eval_{music}_{cid}", None)
+            score = st.session_state.get(f"eval_{music}_A_{cid}", None)
             if score is None:
-                st.warning("未評価のコメントがあります。")
-                st.stop()
+                has_error = True
+                break
 
             rows_to_save.append([
                 datetime.now().isoformat(),
@@ -212,12 +213,12 @@ if st.button("提出"):
                 score
             ])
 
-        # B側（固定コメント）
+        # B側
         for i in range(len(BASELINE_TOP5[music])):
-            score = st.session_state.get(f"eval_{music}_b{i}", None)
+            score = st.session_state.get(f"eval_{music}_B_{i}", None)
             if score is None:
-                st.warning("未評価のコメントがあります。")
-                st.stop()
+                has_error = True
+                break
 
             rows_to_save.append([
                 datetime.now().isoformat(),
@@ -228,21 +229,24 @@ if st.button("提出"):
                 score
             ])
 
-    with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        if not os.path.exists(LOG_FILE):
-            writer.writerow([
-                "timestamp",
-                "participant_id",
-                "music",
-                "source",
-                "comment_number",
-                "novelty_score"
-            ])
-        writer.writerows(rows_to_save)
+    if has_error:
+        st.warning("未評価のコメントがあります。")
+    else:
+        new_file = not os.path.exists(LOG_FILE)
+        with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if new_file:
+                writer.writerow([
+                    "timestamp",
+                    "participant_id",
+                    "music",
+                    "source",
+                    "comment_number",
+                    "novelty_score"
+                ])
+            writer.writerows(rows_to_save)
 
-    st.success("ご協力ありがとうございました。")
-
+        st.success("ご協力ありがとうございました。")
 
 # =============================
 # 管理者用
