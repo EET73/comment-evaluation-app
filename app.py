@@ -266,5 +266,3 @@ if st.session_state.is_admin and os.path.exists(LOG_FILE):
             "experiment_log.csv",
             "text/csv"
         )
-
-        )
