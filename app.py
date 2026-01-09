@@ -39,18 +39,17 @@ if "responses" not in st.session_state:
 st.title("コメント評価実験（新規性）")
 
 st.markdown("""
-本実験では、コメント内容の**新規性**を評価していただきます。
+本実験では、コメント内容の**関連性**を評価していただきます。
 
-- 分布図から **新規性(縦軸)の高いと感じる点を10個選択**
+- 分布図から **関連性(横軸)の高いと感じる点を10個選択**
 - 選択後、20件のコメントを **5段階で評価**
 """)
 
 st.info("""
-**新規性の判断基準**
+**関連性の判断基準**
 
-・「あるある」な内容ではない  
-・ユニークな視点や表現がある  
-・新しい気づき・発見がある　など  
+・楽曲に直接関係する内容(歌詞、MV、メロディなど)に言及 
+・感想、考察など
 """)
 
 # =============================
@@ -171,7 +170,7 @@ for music, info in file_map.items():
     st.subheader("コメント分布")
 
     TOP_N = 70
-    df_show = df.sort_values("新規性_norm", ascending=False).head(TOP_N)
+    df_show = df.sort_values("関連性_norm", ascending=False).head(TOP_N)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.scatter(df_show["関連性_norm"], df_show["新規性_norm"], alpha=0.7)
@@ -236,15 +235,15 @@ for music, info in file_map.items():
             st.write(item["comment"])
 
             score = st.radio(
-                "新規性評価",
+                "関連性評価",
                 [1, 2, 3, 4, 5],
                 index=None,   # ★ 未選択状態
                 format_func=lambda x: {
-                    1: "1：まったく新規性を感じない",
-                    2: "2：あまり新規性を感じない",
+                    1: "1：まったく関連性を感じない",
+                    2: "2：あまり関連性を感じない",
                     3: "3：どちらともいえない",
-                    4: "4：やや新規性がある",
-                    5: "5：非常に新規性がある"
+                    4: "4：やや関連性がある",
+                    5: "5：非常に関連性がある"
                 }[x],
                 key=f"eval_{music}_{i}"
             )
