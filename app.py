@@ -89,7 +89,28 @@ for music, info in file_map.items():
 
     # -------- コメント分布 --------
     st.subheader("コメント分布")
-    ...
+
+    TOP_N = 70
+    df_show = df.sort_values("関連性_norm", ascending=False).head(TOP_N)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.scatter(
+        df_show["関連性_norm"],
+        df_show["新規性_norm"],
+        alpha=0.7
+    )
+
+    for _, row in df_show.iterrows():
+        ax.text(
+            row["関連性_norm"],
+            row["新規性_norm"],
+            str(int(row["コメント番号"])),
+            fontsize=4
+        )
+
+    ax.set_xlabel("Relevance")
+    ax.set_ylabel("Novelty")
+
     st.pyplot(fig)
 
     # -------- 10件選択 --------
@@ -110,7 +131,7 @@ for music, info in file_map.items():
         else:
             st.warning("10件選択してください。")
 
-    # -------- 評価表示（★forの中！） --------
+    # -------- 評価表示 --------
     if st.session_state.confirmed.get(music, False):
         st.subheader("コメント評価")
 
@@ -142,7 +163,6 @@ for music, info in file_map.items():
                 "comment": row["コメント"],
                 "score": score
             }
-
 # =============================
 # 提出
 # =============================
