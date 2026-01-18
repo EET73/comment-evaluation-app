@@ -87,25 +87,9 @@ for music, info in file_map.items():
 
     df = pd.read_excel(info["file"])
 
-    # -------- コメント分布（番号のみ） --------
+    # -------- コメント分布 --------
     st.subheader("コメント分布")
-
-    TOP_N = 70
-    df_show = df.sort_values("関連性_norm", ascending=False).head(TOP_N)
-
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.scatter(df_show["関連性_norm"], df_show["新規性_norm"], alpha=0.7)
-
-    for _, row in df_show.iterrows():
-        ax.text(
-            row["関連性_norm"],
-            row["新規性_norm"],
-            str(int(row["コメント番号"])),
-            fontsize=4
-        )
-
-    ax.set_xlabel("Relevance")
-    ax.set_ylabel("Novelty")
+    ...
     st.pyplot(fig)
 
     # -------- 10件選択 --------
@@ -126,37 +110,38 @@ for music, info in file_map.items():
         else:
             st.warning("10件選択してください。")
 
-# -------- 評価表示 --------
-if st.session_state.confirmed.get(music, False):
-    st.subheader("コメント評価")
+    # -------- 評価表示（★forの中！） --------
+    if st.session_state.confirmed.get(music, False):
+        st.subheader("コメント評価")
 
-    # 選択コメントのみ
-    selected_rows = df[df["コメント番号"].isin(st.session_state.selected_ids[music])]
+        selected_rows = df[
+            df["コメント番号"].isin(st.session_state.selected_ids[music])
+        ]
 
-    for i, (_, row) in enumerate(selected_rows.iterrows()):
-        st.write(row["コメント"])
+        for i, (_, row) in enumerate(selected_rows.iterrows()):
+            st.write(row["コメント"])
 
-        score = st.radio(
-            "関連性評価",
-            [1, 2, 3, 4, 5],
-            index=None,
-            format_func=lambda x: {
-                1: "1：まったく関連性を感じない",
-                2: "2：あまり関連性を感じない",
-                3: "3：どちらともいえない",
-                4: "4：やや関連性がある",
-                5: "5：非常に関連性がある"
-            }[x],
-            key=f"eval_{music}_{i}"
-        )
+            score = st.radio(
+                "関連性評価",
+                [1, 2, 3, 4, 5],
+                index=None,
+                format_func=lambda x: {
+                    1: "1：まったく関連性を感じない",
+                    2: "2：あまり関連性を感じない",
+                    3: "3：どちらともいえない",
+                    4: "4：やや関連性がある",
+                    5: "5：非常に関連性がある"
+                }[x],
+                key=f"eval_{music}_{i}"
+            )
 
-        st.session_state.responses[(music, i)] = {
-            "music": music,
-            "source": "selected",
-            "comment_number": int(row["コメント番号"]),
-            "comment": row["コメント"],
-            "score": score
-        }
+            st.session_state.responses[(music, i)] = {
+                "music": music,
+                "source": "selected",
+                "comment_number": int(row["コメント番号"]),
+                "comment": row["コメント"],
+                "score": score
+            }
 
 # =============================
 # 提出
