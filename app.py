@@ -44,8 +44,8 @@ st.markdown("""
 - 分布図から **関連性(横軸)のどちらも高いと感じる点を10個選択**
 - 選択後、これら10件のコメントを **5段階で評価**
 - 2つの楽曲についてこれを行ってもらいます。
-- 見覚えあるコメントばかりかもだけどゆるして
 """)
+st.caption("""(見覚えあるコメントばかりかもだけどゆるして)""")
 
 st.info("""
 **関連性の判断基準**
@@ -66,11 +66,11 @@ st.info("""
 # =============================
 file_map = {
     "アイネクライネ": {
-        "file": "comment2_xy.xlsx",
+        "file": "comment4_xy.xlsx",
         "url": "https://www.youtube.com/watch?v=-EKxzId_Sj4"
     },
     "アイドル": {
-        "file": "comment3_xy.xlsx",
+        "file": "comment5_xy.xlsx",
         "url": "https://www.youtube.com/watch?v=ZRtdQ81jPUQ"
     }
 }
