@@ -45,7 +45,6 @@ st.markdown("""
 - 選択後、これら10件のコメントを **5段階で評価**
 - 2つの楽曲についてこれを行ってもらいます。
 """)
-st.caption("""(見覚えあるコメントばかりかもだけどゆるして)""")
 
 st.info("""
 **関連性の判断基準**
@@ -66,11 +65,11 @@ st.info("""
 # =============================
 file_map = {
     "アイネクライネ": {
-        "file": "comment4_xy.xlsx",
+        "file": "comment4_2_xy.xlsx",
         "url": "https://www.youtube.com/watch?v=-EKxzId_Sj4"
     },
     "アイドル": {
-        "file": "comment5_xy.xlsx",
+        "file": "comment5_2_xy.xlsx",
         "url": "https://www.youtube.com/watch?v=ZRtdQ81jPUQ"
     }
 }
